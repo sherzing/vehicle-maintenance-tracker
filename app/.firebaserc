@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "maintainer-dev",
+    "dev": "maintainer-dev"
+  },
+  "targets": {},
+  "etags": {}
+}
