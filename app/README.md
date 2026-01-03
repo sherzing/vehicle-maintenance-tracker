@@ -46,15 +46,60 @@ src/
 - **React Testing Library** - Component testing
 
 ## Available Scripts
+
+### Development
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
+
+### Testing
 - `npm test` - Run tests in watch mode
 - `npm test -- --run` - Run tests once
 - `npm run test:ui` - Run tests with UI
 - `npm run test:coverage` - Generate test coverage report
 
+### Firebase Deployment
+- `npm run deploy` - Build and deploy everything to Firebase
+- `npm run deploy:hosting` - Deploy only hosting
+- `npm run deploy:rules` - Deploy only Firestore security rules
+- `npm run emulators` - Start Firebase emulators for local testing
+- `npm run firebase -- <command>` - Run any Firebase CLI command
+
+## Deployment
+
+### First Time Setup
+1. Install Firebase CLI globally (optional):
+   ```bash
+   npm install -g firebase-tools
+   ```
+
+2. Login to Firebase:
+   ```bash
+   firebase login
+   ```
+
+3. Initialize Firebase in the project:
+   ```bash
+   npm run firebase init
+   ```
+   Select: Hosting, Firestore
+   - Hosting: Use `dist` as public directory
+   - Configure as single-page app: Yes
+   - Set up automatic builds: No
+
+4. Deploy:
+   ```bash
+   npm run deploy
+   ```
+
+### Subsequent Deployments
+```bash
+npm run deploy
+```
+
 ## Documentation
 See `/tasks/prd-vehicle-maintenance-tracker.md` for full product requirements.
 See `/claude.md` for project context and development guidelines.
+See `FIREBASE_SETUP.md` for Firebase configuration instructions.
+See `TESTING.md` for testing guidelines.
