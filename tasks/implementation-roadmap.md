@@ -1,8 +1,9 @@
 # Vehicle Maintenance Tracker - Implementation Roadmap
 
-## Milestone 1: Foundation
-- [ ] Set up project foundation (Vite + React + Firebase SDK)
-- [ ] Configure Firebase project (Firestore + Auth)
+## Milestone 1: Foundation ✅ COMPLETE
+- [x] Set up project foundation (Vite + React + Firebase SDK)
+- [x] Configure Firebase project (Firestore + Auth)
+- [x] Add testing infrastructure (Vitest + React Testing Library)
 
 ## Milestone 2: Auth & Teams
 - [ ] Implement Google Authentication and user session
@@ -14,19 +15,19 @@
 
 ## Milestone 4: Maintenance Items
 - [ ] Build maintenance item management (add, edit, delete items)
-- [ ] Implement status calculation logic (usage + time intervals)
+- [x] Implement status calculation logic (usage + time intervals) ⚠️ PARTIALLY DONE (logic implemented, UI pending)
 
 ## Milestone 5: Tracking Features
 - [ ] Create usage update feature with dual storage (current + history)
 - [ ] Build service logging with conditional schedule updates
 
 ## Milestone 6: Dashboard & UX
-- [ ] Implement 10% warning threshold and color-coded status display
+- [x] Implement 10% warning threshold and color-coded status display ⚠️ PARTIALLY DONE (logic implemented, UI pending)
 - [ ] Create dashboard with vehicle overview and status indicators
 
 ## Milestone 7: Polish
 - [ ] Add race number field and display to vehicle management
-- [ ] Handle edge cases (never-serviced items, historical services)
+- [x] Handle edge cases (never-serviced items, historical services) ⚠️ PARTIALLY DONE (logic handles edge cases, UI pending)
 - [ ] Implement responsive UI (mobile + desktop layouts)
 - [ ] Add form validation and error handling throughout app
 
@@ -37,6 +38,16 @@
 
 ---
 
-**Current Status:** Not started
+**Current Status:** Milestone 1 Complete, Milestone 2 Ready to Start
+**Completed:** 3/20 tasks (15%)
+**Partially Complete:** 3 tasks (business logic done, UI integration pending)
 **MVP Target:** Milestone 6 (Dashboard & UX)
 **Nice-to-Have:** Milestones 7-8
+
+## Recent Progress
+
+- ✅ Project initialized with Vite + React + Firebase SDK
+- ✅ Firebase configuration ready (awaiting user credentials)
+- ✅ Testing infrastructure fully operational (Vitest + RTL)
+- ✅ Core status calculation logic implemented and tested (21 tests passing)
+- 📋 Ready to begin Google Authentication implementation
