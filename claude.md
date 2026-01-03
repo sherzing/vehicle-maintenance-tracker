@@ -101,6 +101,12 @@ const WARNING_THRESHOLD = 0.10  // 10%
 4. Team members have equal permissions (owner role reserved for future use)
 
 ## Development Notes
+- Use TDD to create new features
+- Always create a failing test first, then create the smallest amount of code to make the test pass
+- Create tests for corner cases as well
+- Always test the interface of a method, not the implementation so that the test stays the same when the implementation would change
+- Check types to improve code quality
+- Keep code close to stock typescript
 
 ### Firestore Security Rules (TODO)
 - Users can only read/write teams they're a member of (`uid in team.member_ids`)

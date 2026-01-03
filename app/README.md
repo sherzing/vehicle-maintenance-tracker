@@ -42,12 +42,18 @@ src/
 - **Firebase 12** - Backend (Auth + Firestore)
 - **React Bootstrap 2** - UI components
 - **React Router DOM 7** - Routing
+- **Vitest 4** - Unit testing framework
+- **React Testing Library** - Component testing
 
 ## Available Scripts
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
+- `npm test` - Run tests in watch mode
+- `npm test -- --run` - Run tests once
+- `npm run test:ui` - Run tests with UI
+- `npm run test:coverage` - Generate test coverage report
 
 ## Documentation
 See `/tasks/prd-vehicle-maintenance-tracker.md` for full product requirements.
