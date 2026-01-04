@@ -108,6 +108,10 @@ const WARNING_THRESHOLD = 0.10  // 10%
 - Check types to improve code quality
 - Keep code close to stock typescript
 
+### Security Rules
+- Check all code against OWASP top 10
+- Validate all inputs 
+
 ### Firestore Security Rules (TODO)
 - Users can only read/write teams they're a member of (`uid in team.member_ids`)
 - All vehicle operations must verify team membership

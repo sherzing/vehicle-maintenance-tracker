@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import NavigationBar from './components/common/NavigationBar';
 import Login from './components/auth/Login';
 import Dashboard from './components/dashboard/Dashboard';
+import TeamsPage from './components/teams/TeamsPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import './App.css';
 
@@ -18,6 +19,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teams"
+            element={
+              <ProtectedRoute>
+                <TeamsPage />
               </ProtectedRoute>
             }
           />
