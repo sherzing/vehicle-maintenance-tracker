@@ -82,9 +82,14 @@ describe('CreateTeamModal', () => {
 
     await waitFor(() => {
       expect(teamsService.createTeam).toHaveBeenCalledWith(userId, 'New Team');
+      expect(screen.getByText('Team created successfully!')).toBeInTheDocument();
+    });
+
+    // Callbacks will be called after 1 second timeout
+    await waitFor(() => {
       expect(mockOnTeamCreated).toHaveBeenCalledWith(teamId);
       expect(mockOnHide).toHaveBeenCalled();
-    });
+    }, { timeout: 2000 });
   });
 
   it('should handle creation error', async () => {

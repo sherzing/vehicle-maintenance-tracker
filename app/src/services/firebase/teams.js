@@ -5,6 +5,7 @@ import {
   getDocs,
   addDoc,
   updateDoc,
+  setDoc,
   query,
   where,
   serverTimestamp,
@@ -96,7 +97,7 @@ export async function addUserToTeam(userId, teamId) {
     });
   } else {
     // Create user document if it doesn't exist
-    await updateDoc(userRef, {
+    await setDoc(userRef, {
       email: '', // Will be populated from auth
       display_name: '', // Will be populated from auth
       team_ids: [teamId],
