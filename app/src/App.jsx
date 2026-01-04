@@ -1,25 +1,31 @@
-import { Container, Navbar } from 'react-bootstrap'
-import './App.css'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import NavigationBar from './components/common/NavigationBar';
+import Login from './components/auth/Login';
+import Dashboard from './components/dashboard/Dashboard';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import './App.css';
 
 function App() {
   return (
-    <>
-      <Navbar bg="dark" variant="dark" className="mb-4">
-        <Container>
-          <Navbar.Brand>Vehicle Maintenance Tracker</Navbar.Brand>
-        </Container>
-      </Navbar>
-
-      <Container>
-        <div className="text-center mt-5">
-          <h1>Welcome to Vehicle Maintenance Tracker</h1>
-          <p className="lead">
-            Setup in progress. Authentication and features coming soon.
-          </p>
-        </div>
-      </Container>
-    </>
-  )
+    <Router>
+      <AuthProvider>
+        <NavigationBar />
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </AuthProvider>
+    </Router>
+  );
 }
 
-export default App
+export default App;

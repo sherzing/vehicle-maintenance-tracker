@@ -1,29 +1,39 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from './test/utils';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, waitFor } from './test/utils';
 import App from './App';
 
+// Mock Firebase auth
+vi.mock('./services/firebase/config', () => ({
+  auth: {
+    currentUser: null,
+  },
+}));
+
+vi.mock('firebase/auth', () => ({
+  signInWithPopup: vi.fn(),
+  GoogleAuthProvider: vi.fn(),
+  signOut: vi.fn(),
+  onAuthStateChanged: vi.fn((auth, callback) => {
+    callback(null); // No user logged in
+    return vi.fn(); // Return unsubscribe function
+  }),
+}));
+
 describe('App', () => {
-  it('should render the app title', () => {
+  it('should render login page when not authenticated', async () => {
     render(<App />);
-    expect(screen.getByText('Vehicle Maintenance Tracker')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText('Vehicle Maintenance Tracker')).toBeInTheDocument();
+      expect(screen.getByText(/Sign in to manage your vehicles/i)).toBeInTheDocument();
+    });
   });
 
-  it('should render welcome message', () => {
+  it('should render Google sign in button', async () => {
     render(<App />);
-    expect(screen.getByText('Welcome to Vehicle Maintenance Tracker')).toBeInTheDocument();
-  });
 
-  it('should show setup in progress message', () => {
-    render(<App />);
-    expect(
-      screen.getByText('Setup in progress. Authentication and features coming soon.')
-    ).toBeInTheDocument();
-  });
-
-  it('should render navbar with dark variant', () => {
-    const { container } = render(<App />);
-    const navbar = container.querySelector('.navbar');
-    expect(navbar).toHaveClass('bg-dark');
-    expect(navbar).toHaveClass('navbar-dark');
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Sign in with Google/i })).toBeInTheDocument();
+    });
   });
 });
