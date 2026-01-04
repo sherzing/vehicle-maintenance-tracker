@@ -2,8 +2,84 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isTeamMember(teamId) {
+      return isAuthenticated() &&
+             request.auth.uid in get(/databases/$(database)/documents/teams/$(teamId)).data.member_ids;
+    }
+
+    function isTeamOwner(teamId) {
+      return isAuthenticated() &&
+             request.auth.uid == get(/databases/$(database)/documents/teams/$(teamId)).data.owner_id;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Users can read and write their own user document
+      allow read, write: if isAuthenticated() && isOwner(userId);
+    }
+
+    // Teams collection
+    match /teams/{teamId} {
+      // Any authenticated user can create a team
+      allow create: if isAuthenticated() &&
+                      request.resource.data.owner_id == request.auth.uid &&
+                      request.auth.uid in request.resource.data.member_ids;
+
+      // Users can read teams they're members of
+      allow read: if isAuthenticated() &&
+                    request.auth.uid in resource.data.member_ids;
+
+      // Only team owners can update or delete teams
+      allow update: if isAuthenticated() && isTeamOwner(teamId);
+      allow delete: if isAuthenticated() && isTeamOwner(teamId);
+    }
+
+    // Vehicles collection (for future implementation)
+    match /vehicles/{vehicleId} {
+      // Users can read vehicles in their teams
+      allow read: if isAuthenticated() && isTeamMember(resource.data.team_id);
+
+      // Users can create vehicles in their teams
+      allow create: if isAuthenticated() && isTeamMember(request.resource.data.team_id);
+
+      // Users can update/delete vehicles in their teams
+      allow update, delete: if isAuthenticated() && isTeamMember(resource.data.team_id);
+    }
+
+    // Maintenance items collection (for future implementation)
+    match /maintenance_items/{itemId} {
+      // Users can access maintenance items for vehicles in their teams
+      allow read: if isAuthenticated() &&
+                    isTeamMember(get(/databases/$(database)/documents/vehicles/$(resource.data.vehicle_id)).data.team_id);
+
+      allow create: if isAuthenticated() &&
+                      isTeamMember(get(/databases/$(database)/documents/vehicles/$(request.resource.data.vehicle_id)).data.team_id);
+
+      allow update, delete: if isAuthenticated() &&
+                              isTeamMember(get(/databases/$(database)/documents/vehicles/$(resource.data.vehicle_id)).data.team_id);
+    }
+
+    // Service history collection (for future implementation)
+    match /service_history/{historyId} {
+      // Users can access service history for vehicles in their teams
+      allow read: if isAuthenticated() &&
+                    isTeamMember(get(/databases/$(database)/documents/vehicles/$(resource.data.vehicle_id)).data.team_id);
+
+      allow create: if isAuthenticated() &&
+                      isTeamMember(get(/databases/$(database)/documents/vehicles/$(request.resource.data.vehicle_id)).data.team_id);
+
+      allow update, delete: if isAuthenticated() &&
+                              isTeamMember(get(/databases/$(database)/documents/vehicles/$(resource.data.vehicle_id)).data.team_id);
     }
   }
 }
