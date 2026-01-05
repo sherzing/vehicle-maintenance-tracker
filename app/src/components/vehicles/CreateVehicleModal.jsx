@@ -22,6 +22,7 @@ export default function CreateVehicleModal({ show, onHide, onVehicleCreated, tea
     model: '',
     year: '',
     race_number: '',
+    vin: '',
     current_usage: '',
     usage_unit: 'km',
   });
@@ -54,6 +55,7 @@ export default function CreateVehicleModal({ show, onHide, onVehicleCreated, tea
         model: formData.model.trim() || null,
         year: formData.year ? parseInt(formData.year) : null,
         race_number: formData.race_number.trim() || null,
+        vin: formData.vin.trim() || null,
         current_usage: formData.current_usage ? parseFloat(formData.current_usage) : 0,
         usage_unit: formData.usage_unit,
       };
@@ -90,6 +92,7 @@ export default function CreateVehicleModal({ show, onHide, onVehicleCreated, tea
       model: '',
       year: '',
       race_number: '',
+      vin: '',
       current_usage: '',
       usage_unit: 'km',
     });
@@ -228,6 +231,26 @@ export default function CreateVehicleModal({ show, onHide, onVehicleCreated, tea
                     </option>
                   ))}
                 </Form.Select>
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
+            <Col md={12}>
+              <Form.Group className="mb-3">
+                <Form.Label>VIN (Vehicle Identification Number)</Form.Label>
+                <Form.Control
+                  type="text"
+                  name="vin"
+                  placeholder="e.g., 1HGBH41JXMN109186"
+                  value={formData.vin}
+                  onChange={handleChange}
+                  disabled={loading || success}
+                  maxLength="17"
+                />
+                <Form.Text className="text-muted">
+                  Optional 17-character vehicle identification number
+                </Form.Text>
               </Form.Group>
             </Col>
           </Row>

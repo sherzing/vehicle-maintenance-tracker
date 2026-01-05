@@ -22,6 +22,7 @@ export default function EditVehicleModal({ show, onHide, onVehicleUpdated, vehic
     model: '',
     year: '',
     race_number: '',
+    vin: '',
     usage_unit: 'km',
   });
   const [loading, setLoading] = useState(false);
@@ -38,6 +39,7 @@ export default function EditVehicleModal({ show, onHide, onVehicleUpdated, vehic
         model: vehicle.model || '',
         year: vehicle.year || '',
         race_number: vehicle.race_number || '',
+        vin: vehicle.vin || '',
         usage_unit: vehicle.usage_unit || 'km',
       });
     }
@@ -67,6 +69,7 @@ export default function EditVehicleModal({ show, onHide, onVehicleUpdated, vehic
         model: formData.model.trim() || null,
         year: formData.year ? parseInt(formData.year) : null,
         race_number: formData.race_number.trim() || null,
+        vin: formData.vin.trim() || null,
         usage_unit: formData.usage_unit,
       };
 
@@ -208,6 +211,26 @@ export default function EditVehicleModal({ show, onHide, onVehicleUpdated, vehic
                   onChange={handleChange}
                   disabled={loading || success}
                 />
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
+            <Col md={12}>
+              <Form.Group className="mb-3">
+                <Form.Label>VIN (Vehicle Identification Number)</Form.Label>
+                <Form.Control
+                  type="text"
+                  name="vin"
+                  placeholder="e.g., 1HGBH41JXMN109186"
+                  value={formData.vin}
+                  onChange={handleChange}
+                  disabled={loading || success}
+                  maxLength="17"
+                />
+                <Form.Text className="text-muted">
+                  Optional 17-character vehicle identification number
+                </Form.Text>
               </Form.Group>
             </Col>
           </Row>

@@ -155,6 +155,11 @@ export default function VehicleDetail({ vehicleId }) {
               </div>
             )}
           </div>
+          {vehicle.vin && (
+            <div className="mb-2">
+              <strong>VIN:</strong> {vehicle.vin}
+            </div>
+          )}
           <div>
             <strong>Current Usage:</strong> {formatUsage(vehicle.current_usage, vehicle.usage_unit)}
           </div>
