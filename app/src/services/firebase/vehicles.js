@@ -8,7 +8,6 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from './config';
@@ -57,15 +56,21 @@ export async function getVehicle(vehicleId) {
 export async function getTeamVehicles(teamId) {
   const vehiclesQuery = query(
     collection(db, 'vehicles'),
-    where('team_id', '==', teamId),
-    orderBy('created_at', 'desc')
+    where('team_id', '==', teamId)
   );
 
   const snapshot = await getDocs(vehiclesQuery);
-  return snapshot.docs.map(doc => ({
+  const vehicles = snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data(),
   }));
+
+  // Sort by created_at client-side to avoid requiring a composite index
+  return vehicles.sort((a, b) => {
+    const aTime = a.created_at?.toMillis?.() || 0;
+    const bTime = b.created_at?.toMillis?.() || 0;
+    return bTime - aTime; // Descending order (newest first)
+  });
 }
 
 /**
