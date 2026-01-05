@@ -1,10 +1,17 @@
 import { Card, ListGroup, Button, Badge } from 'react-bootstrap';
+import {
+  getMaintenanceStatus,
+  getStatusBadgeVariant,
+  getStatusText,
+  formatRemaining,
+} from '../../utils/maintenanceStatus';
 
 export default function MaintenanceItemList({
   items,
   onCreateItem,
   onDeleteItem,
-  usageUnit = 'km'
+  usageUnit = 'km',
+  currentUsage = 0,
 }) {
   if (!items || items.length === 0) {
     return (
@@ -45,11 +52,20 @@ export default function MaintenanceItemList({
           const lastServiceUsage = formatInterval(item.last_service_usage, usageUnit);
           const lastServiceDate = formatDate(item.last_service_date);
 
+          // Calculate maintenance status
+          const statusInfo = getMaintenanceStatus(item, currentUsage);
+          const statusVariant = getStatusBadgeVariant(statusInfo.status);
+          const statusLabel = getStatusText(statusInfo.status);
+          const remaining = formatRemaining(statusInfo, usageUnit);
+
           return (
             <ListGroup.Item key={item.id}>
               <div className="d-flex justify-content-between align-items-start">
                 <div className="flex-grow-1">
-                  <div className="fw-semibold">{item.name}</div>
+                  <div className="d-flex align-items-center gap-2 mb-1">
+                    <span className="fw-semibold">{item.name}</span>
+                    <Badge bg={statusVariant}>{statusLabel}</Badge>
+                  </div>
 
                   <div className="mt-1">
                     <small className="text-muted d-block">
@@ -72,7 +88,23 @@ export default function MaintenanceItemList({
 
                   {!lastServiceUsage && !lastServiceDate && (
                     <div className="mt-1">
-                      <Badge bg="warning" text="dark">Never serviced</Badge>
+                      <Badge bg="secondary" text="white">Never serviced</Badge>
+                    </div>
+                  )}
+
+                  {remaining && statusInfo.status !== 'overdue' && (
+                    <div className="mt-1">
+                      <small className="text-muted">
+                        <strong>Remaining:</strong> {remaining}
+                      </small>
+                    </div>
+                  )}
+
+                  {statusInfo.status === 'overdue' && (
+                    <div className="mt-1">
+                      <small className="text-danger">
+                        <strong>Action required!</strong> This maintenance is overdue.
+                      </small>
                     </div>
                   )}
                 </div>

@@ -122,6 +122,7 @@ export default function VehicleDetail({ vehicleId }) {
         onCreateItem={() => setShowCreateModal(true)}
         onDeleteItem={handleDeleteItem}
         usageUnit={vehicle.usage_unit}
+        currentUsage={vehicle.current_usage || 0}
       />
 
       <CreateMaintenanceItemModal
