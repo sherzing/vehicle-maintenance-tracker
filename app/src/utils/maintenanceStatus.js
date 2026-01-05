@@ -4,6 +4,7 @@
 
 const WARNING_THRESHOLD_LARGE = 0.9; // 90% - show warning when this close to due (for large intervals)
 const WARNING_THRESHOLD_SMALL = 0.8; // 80% - show warning earlier for small intervals (20% remaining)
+const OVERDUE_THRESHOLD = 1.1; // 110% - only mark as overdue when significantly past due (10% over)
 
 // Thresholds for determining "small" intervals
 const SMALL_INTERVAL_KM = 1500; // km
@@ -15,7 +16,7 @@ const SMALL_INTERVAL_HOURS = 20; // hours
  * @param {number} lastServiceUsage - Usage when last serviced
  * @param {number} usageInterval - Interval between services
  * @param {string} usageUnit - Unit of measurement ('km' or 'hours')
- * @returns {object} { percentage, isDue, isDueSoon }
+ * @returns {object} { percentage, isDue, isOverdue, isDueSoon }
  */
 function calculateUsageStatus(currentUsage, lastServiceUsage, usageInterval, usageUnit = 'km') {
   if (!usageInterval || usageInterval === 0) {
@@ -35,7 +36,8 @@ function calculateUsageStatus(currentUsage, lastServiceUsage, usageInterval, usa
 
   return {
     percentage,
-    isDue: percentage >= 1,
+    isOverdue: percentage >= OVERDUE_THRESHOLD,
+    isDue: percentage >= 1 && percentage < OVERDUE_THRESHOLD,
     isDueSoon: percentage >= warningThreshold && percentage < 1,
     remaining: Math.max(0, usageInterval - usageSinceService),
   };
@@ -47,7 +49,7 @@ const SMALL_INTERVAL_DAYS = 30; // days
  * Calculate time-based status
  * @param {Date|Timestamp} lastServiceDate - Date when last serviced
  * @param {number} timeIntervalDays - Days between services
- * @returns {object} { percentage, isDue, isDueSoon }
+ * @returns {object} { percentage, isDue, isOverdue, isDueSoon }
  */
 function calculateTimeStatus(lastServiceDate, timeIntervalDays) {
   if (!timeIntervalDays || timeIntervalDays === 0) {
@@ -68,7 +70,8 @@ function calculateTimeStatus(lastServiceDate, timeIntervalDays) {
 
   return {
     percentage,
-    isDue: percentage >= 1,
+    isOverdue: percentage >= OVERDUE_THRESHOLD,
+    isDue: percentage >= 1 && percentage < OVERDUE_THRESHOLD,
     isDueSoon: percentage >= warningThreshold && percentage < 1,
     remaining: Math.max(0, timeIntervalDays - daysSinceService),
   };
@@ -104,8 +107,11 @@ export function getMaintenanceStatus(item, currentUsage, usageUnit = 'km') {
     const maxPercentage = Math.max(usageStatus.percentage, timeStatus.percentage);
     percentage = maxPercentage;
 
-    if (usageStatus.isDue || timeStatus.isDue) {
+    if (usageStatus.isOverdue || timeStatus.isOverdue) {
       overallStatus = 'overdue';
+      primaryReason = usageStatus.percentage > timeStatus.percentage ? 'usage' : 'time';
+    } else if (usageStatus.isDue || timeStatus.isDue) {
+      overallStatus = 'due';
       primaryReason = usageStatus.percentage > timeStatus.percentage ? 'usage' : 'time';
     } else if (usageStatus.isDueSoon || timeStatus.isDueSoon) {
       overallStatus = 'due_soon';
@@ -114,8 +120,11 @@ export function getMaintenanceStatus(item, currentUsage, usageUnit = 'km') {
   } else if (usageStatus) {
     // Only usage interval
     percentage = usageStatus.percentage;
-    if (usageStatus.isDue) {
+    if (usageStatus.isOverdue) {
       overallStatus = 'overdue';
+      primaryReason = 'usage';
+    } else if (usageStatus.isDue) {
+      overallStatus = 'due';
       primaryReason = 'usage';
     } else if (usageStatus.isDueSoon) {
       overallStatus = 'due_soon';
@@ -124,8 +133,11 @@ export function getMaintenanceStatus(item, currentUsage, usageUnit = 'km') {
   } else if (timeStatus) {
     // Only time interval
     percentage = timeStatus.percentage;
-    if (timeStatus.isDue) {
+    if (timeStatus.isOverdue) {
       overallStatus = 'overdue';
+      primaryReason = 'time';
+    } else if (timeStatus.isDue) {
+      overallStatus = 'due';
       primaryReason = 'time';
     } else if (timeStatus.isDueSoon) {
       overallStatus = 'due_soon';
@@ -135,7 +147,7 @@ export function getMaintenanceStatus(item, currentUsage, usageUnit = 'km') {
 
   return {
     status: overallStatus,
-    percentage: Math.min(percentage, 1), // Cap at 100%
+    percentage, // Don't cap percentage - we need it to exceed 100% to detect overdue
     primaryReason,
     usageStatus,
     timeStatus,
@@ -148,11 +160,13 @@ export function getMaintenanceStatus(item, currentUsage, usageUnit = 'km') {
 export function getStatusBadgeVariant(status) {
   switch (status) {
     case 'overdue':
-      return 'danger';
+      return 'danger'; // Red - significantly past due
+    case 'due':
+      return 'warning'; // Orange - at or slightly past due
     case 'due_soon':
-      return 'warning';
+      return 'info'; // Blue - approaching due
     case 'ok':
-      return 'success';
+      return 'success'; // Green - all good
     default:
       return 'secondary';
   }
@@ -165,6 +179,8 @@ export function getStatusText(status) {
   switch (status) {
     case 'overdue':
       return 'Overdue';
+    case 'due':
+      return 'Due';
     case 'due_soon':
       return 'Due Soon';
     case 'ok':

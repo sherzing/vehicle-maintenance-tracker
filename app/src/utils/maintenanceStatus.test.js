@@ -38,7 +38,22 @@ describe('maintenanceStatus', () => {
       expect(status.primaryReason).toBe('usage');
     });
 
-    it('should return overdue when usage exceeds interval', () => {
+    it('should return due when usage reaches interval', () => {
+      const item = {
+        usage_interval: 5000,
+        last_service_usage: 0,
+        time_interval_days: null,
+        last_service_date: null,
+      };
+
+      const status = getMaintenanceStatus(item, 5000); // Exactly at interval
+
+      expect(status.status).toBe('due');
+      expect(status.percentage).toBe(1);
+      expect(status.primaryReason).toBe('usage');
+    });
+
+    it('should return overdue when usage significantly exceeds interval (>110%)', () => {
       const item = {
         usage_interval: 5000,
         last_service_usage: 1000,
@@ -46,10 +61,10 @@ describe('maintenanceStatus', () => {
         last_service_date: null,
       };
 
-      const status = getMaintenanceStatus(item, 7000);
+      const status = getMaintenanceStatus(item, 7500); // 130% (6500 / 5000)
 
       expect(status.status).toBe('overdue');
-      expect(status.percentage).toBeGreaterThanOrEqual(1);
+      expect(status.percentage).toBeGreaterThanOrEqual(1.1);
       expect(status.primaryReason).toBe('usage');
     });
 
@@ -71,7 +86,25 @@ describe('maintenanceStatus', () => {
       expect(status.primaryReason).toBe('time');
     });
 
-    it('should return overdue when time exceeds interval', () => {
+    it('should return due when time reaches interval', () => {
+      const now = new Date();
+      const lastService = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); // 90 days ago
+
+      const item = {
+        usage_interval: null,
+        last_service_usage: null,
+        time_interval_days: 90,
+        last_service_date: lastService,
+      };
+
+      const status = getMaintenanceStatus(item, 0);
+
+      expect(status.status).toBe('due');
+      expect(status.percentage).toBeCloseTo(1, 1);
+      expect(status.primaryReason).toBe('time');
+    });
+
+    it('should return overdue when time significantly exceeds interval (>110%)', () => {
       const now = new Date();
       const lastService = new Date(now.getTime() - 120 * 24 * 60 * 60 * 1000); // 120 days ago
 
@@ -85,7 +118,7 @@ describe('maintenanceStatus', () => {
       const status = getMaintenanceStatus(item, 0);
 
       expect(status.status).toBe('overdue');
-      expect(status.percentage).toBeGreaterThanOrEqual(1);
+      expect(status.percentage).toBeGreaterThanOrEqual(1.1);
       expect(status.primaryReason).toBe('time');
     });
 
@@ -107,9 +140,9 @@ describe('maintenanceStatus', () => {
       expect(status.primaryReason).toBe('usage'); // Usage is closer
     });
 
-    it('should return overdue if either interval is overdue', () => {
+    it('should return overdue if either interval is significantly overdue', () => {
       const now = new Date();
-      const lastService = new Date(now.getTime() - 200 * 24 * 60 * 60 * 1000); // 200 days ago
+      const lastService = new Date(now.getTime() - 200 * 24 * 60 * 60 * 1000); // 200 days ago (222% of 90 days)
 
       const item = {
         usage_interval: 10000,
@@ -118,7 +151,7 @@ describe('maintenanceStatus', () => {
         last_service_date: lastService,
       };
 
-      // Usage is 20% complete, time is overdue
+      // Usage is 20% complete, time is significantly overdue
       const status = getMaintenanceStatus(item, 2000);
 
       expect(status.status).toBe('overdue');
@@ -142,7 +175,7 @@ describe('maintenanceStatus', () => {
       expect(status.primaryReason).toBe('time'); // Time is the critical factor
     });
 
-    it('should cap percentage at 1 (100%)', () => {
+    it('should allow percentage to exceed 100% for overdue detection', () => {
       const item = {
         usage_interval: 1000,
         last_service_usage: 0,
@@ -152,7 +185,8 @@ describe('maintenanceStatus', () => {
 
       const status = getMaintenanceStatus(item, 5000); // 500% over
 
-      expect(status.percentage).toBe(1); // Capped at 100%
+      expect(status.percentage).toBe(5); // Not capped, shows actual percentage
+      expect(status.status).toBe('overdue'); // Should be overdue at 500%
     });
 
     it('should use 80% threshold for small km intervals (<= 1500km)', () => {
@@ -248,7 +282,8 @@ describe('maintenanceStatus', () => {
   describe('getStatusBadgeVariant', () => {
     it('should return correct variants', () => {
       expect(getStatusBadgeVariant('overdue')).toBe('danger');
-      expect(getStatusBadgeVariant('due_soon')).toBe('warning');
+      expect(getStatusBadgeVariant('due')).toBe('warning');
+      expect(getStatusBadgeVariant('due_soon')).toBe('info');
       expect(getStatusBadgeVariant('ok')).toBe('success');
       expect(getStatusBadgeVariant('unknown')).toBe('secondary');
     });
@@ -257,6 +292,7 @@ describe('maintenanceStatus', () => {
   describe('getStatusText', () => {
     it('should return human-readable text', () => {
       expect(getStatusText('overdue')).toBe('Overdue');
+      expect(getStatusText('due')).toBe('Due');
       expect(getStatusText('due_soon')).toBe('Due Soon');
       expect(getStatusText('ok')).toBe('OK');
       expect(getStatusText('unknown')).toBe('Unknown');
