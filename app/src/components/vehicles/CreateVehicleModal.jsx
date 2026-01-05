@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Modal, Button, Form, Alert, Row, Col } from 'react-bootstrap';
+import { Modal, Button, Form, Alert, Row, Col, Spinner } from 'react-bootstrap';
 import { createVehicle } from '../../services/firebase/vehicles';
+import { decodeVIN, isValidVINFormat } from '../../utils/vinDecoder';
 
 const VEHICLE_TYPES = [
   { value: 'car', label: 'Car' },
@@ -29,10 +30,55 @@ export default function CreateVehicleModal({ show, onHide, onVehicleCreated, tea
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [decoding, setDecoding] = useState(false);
+  const [decodedInfo, setDecodedInfo] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Clear decoded info if VIN changes
+    if (name === 'vin' && decodedInfo) {
+      setDecodedInfo(null);
+    }
+  };
+
+  const handleDecodeVIN = async () => {
+    if (!formData.vin) {
+      setError('Please enter a VIN first');
+      return;
+    }
+
+    if (!isValidVINFormat(formData.vin)) {
+      setError('Invalid VIN format. VIN must be 17 characters and cannot contain I, O, or Q.');
+      return;
+    }
+
+    setDecoding(true);
+    setError(null);
+
+    try {
+      const decoded = await decodeVIN(formData.vin);
+      setDecodedInfo(decoded);
+
+      // Auto-populate fields with decoded data
+      setFormData(prev => ({
+        ...prev,
+        make: decoded.make || prev.make,
+        model: decoded.model || prev.model,
+        year: decoded.year || prev.year,
+        type: decoded.type || prev.type,
+      }));
+
+      // Success feedback
+      setError(null);
+    } catch (err) {
+      console.error('VIN decode error:', err);
+      setError(err.message || 'Failed to decode VIN. Please check the VIN and try again.');
+      setDecodedInfo(null);
+    } finally {
+      setDecoding(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -96,6 +142,7 @@ export default function CreateVehicleModal({ show, onHide, onVehicleCreated, tea
       current_usage: '',
       usage_unit: 'km',
     });
+    setDecodedInfo(null);
   };
 
   const handleClose = () => {
@@ -239,18 +286,43 @@ export default function CreateVehicleModal({ show, onHide, onVehicleCreated, tea
             <Col md={12}>
               <Form.Group className="mb-3">
                 <Form.Label>VIN (Vehicle Identification Number)</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="vin"
-                  placeholder="e.g., 1HGBH41JXMN109186"
-                  value={formData.vin}
-                  onChange={handleChange}
-                  disabled={loading || success}
-                  maxLength="17"
-                />
+                <div className="d-flex gap-2">
+                  <Form.Control
+                    type="text"
+                    name="vin"
+                    placeholder="e.g., 1HGBH41JXMN109186"
+                    value={formData.vin}
+                    onChange={handleChange}
+                    disabled={loading || success || decoding}
+                    maxLength="17"
+                    style={{ textTransform: 'uppercase' }}
+                  />
+                  <Button
+                    variant="outline-primary"
+                    onClick={handleDecodeVIN}
+                    disabled={loading || success || decoding || !formData.vin || formData.vin.length !== 17}
+                  >
+                    {decoding ? (
+                      <>
+                        <Spinner size="sm" animation="border" className="me-1" />
+                        Decoding...
+                      </>
+                    ) : (
+                      'Decode VIN'
+                    )}
+                  </Button>
+                </div>
                 <Form.Text className="text-muted">
-                  Optional 17-character vehicle identification number
+                  Optional 17-character vehicle identification number. Click "Decode VIN" to auto-fill make, model, and year.
                 </Form.Text>
+                {decodedInfo && (
+                  <Alert variant="success" className="mt-2 mb-0">
+                    <small>
+                      <strong>VIN Decoded:</strong> {decodedInfo.year} {decodedInfo.make} {decodedInfo.model}
+                      {decodedInfo.manufacturer && ` (${decodedInfo.manufacturer})`}
+                    </small>
+                  </Alert>
+                )}
               </Form.Group>
             </Col>
           </Row>
