@@ -90,9 +90,19 @@ export default function VehiclesPage() {
       if (urlVehicleId && teamVehicles.some(v => v.id === urlVehicleId)) {
         // Select the vehicle from the URL if it exists in the loaded vehicles
         setSelectedVehicleId(urlVehicleId);
+      } else if (selectedVehicleId && !teamVehicles.some(v => v.id === selectedVehicleId)) {
+        // Currently selected vehicle doesn't exist in this team - select first vehicle or clear
+        if (teamVehicles.length > 0) {
+          setSelectedVehicleId(teamVehicles[0].id);
+        } else {
+          setSelectedVehicleId(null);
+        }
       } else if (teamVehicles.length > 0 && !selectedVehicleId) {
         // Auto-select first vehicle if none selected and no URL parameter
         setSelectedVehicleId(teamVehicles[0].id);
+      } else if (teamVehicles.length === 0) {
+        // No vehicles in this team - clear selection
+        setSelectedVehicleId(null);
       }
     } catch (err) {
       console.error('Failed to load vehicles:', err);
