@@ -5,6 +5,7 @@ import { getVehicleMaintenanceItems, deleteMaintenanceItem } from '../../service
 import MaintenanceItemList from '../maintenance/MaintenanceItemList';
 import CreateMaintenanceItemModal from '../maintenance/CreateMaintenanceItemModal';
 import LogServiceModal from '../maintenance/LogServiceModal';
+import UpdateUsageModal from './UpdateUsageModal';
 
 const VEHICLE_TYPE_LABELS = {
   car: 'Car',
@@ -20,6 +21,7 @@ export default function VehicleDetail({ vehicleId }) {
   const [error, setError] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showLogServiceModal, setShowLogServiceModal] = useState(false);
+  const [showUpdateUsageModal, setShowUpdateUsageModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
   useEffect(() => {
@@ -73,6 +75,10 @@ export default function VehicleDetail({ vehicleId }) {
     await loadVehicleAndItems();
   };
 
+  const handleUsageUpdated = async () => {
+    await loadVehicleAndItems();
+  };
+
   if (loading) {
     return (
       <div className="text-center py-5">
@@ -111,8 +117,19 @@ export default function VehicleDetail({ vehicleId }) {
     <div>
       <Card className="mb-3">
         <Card.Body>
-          <h4>{vehicle.name}</h4>
-          <p className="text-muted mb-2">{getVehicleLabel()}</p>
+          <div className="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h4>{vehicle.name}</h4>
+              <p className="text-muted mb-2">{getVehicleLabel()}</p>
+            </div>
+            <Button
+              variant="outline-primary"
+              size="sm"
+              onClick={() => setShowUpdateUsageModal(true)}
+            >
+              Update Usage
+            </Button>
+          </div>
           <div className="d-flex gap-3 mb-2">
             <div>
               <strong>Type:</strong> {VEHICLE_TYPE_LABELS[vehicle.type] || vehicle.type}
@@ -153,6 +170,13 @@ export default function VehicleDetail({ vehicleId }) {
         item={selectedItem}
         currentUsage={vehicle.current_usage || 0}
         usageUnit={vehicle.usage_unit}
+      />
+
+      <UpdateUsageModal
+        show={showUpdateUsageModal}
+        onHide={() => setShowUpdateUsageModal(false)}
+        onUsageUpdated={handleUsageUpdated}
+        vehicle={vehicle}
       />
     </div>
   );
