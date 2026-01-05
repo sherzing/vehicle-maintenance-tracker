@@ -54,7 +54,7 @@ export default function MaintenanceItemList({
           const lastServiceDate = formatDate(item.last_service_date);
 
           // Calculate maintenance status
-          const statusInfo = getMaintenanceStatus(item, currentUsage);
+          const statusInfo = getMaintenanceStatus(item, currentUsage, usageUnit);
           const statusVariant = getStatusBadgeVariant(statusInfo.status);
           const statusLabel = getStatusText(statusInfo.status);
           const remaining = formatRemaining(statusInfo, usageUnit);

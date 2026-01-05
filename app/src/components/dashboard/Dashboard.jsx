@@ -68,7 +68,7 @@ export default function Dashboard() {
 
         // Calculate status for each maintenance item
         const itemStatuses = items.map(item => {
-          const status = getMaintenanceStatus(item, vehicle.current_usage || 0);
+          const status = getMaintenanceStatus(item, vehicle.current_usage || 0, vehicle.usage_unit || 'km');
           if (status.status === 'overdue') overdueCount++;
           if (status.status === 'due_soon') dueSoonCount++;
           return { item, status };

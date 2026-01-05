@@ -2,16 +2,22 @@
  * Calculate the status of a maintenance item based on usage and time intervals
  */
 
-const WARNING_THRESHOLD = 0.9; // 90% - show warning when this close to due
+const WARNING_THRESHOLD_LARGE = 0.9; // 90% - show warning when this close to due (for large intervals)
+const WARNING_THRESHOLD_SMALL = 0.8; // 80% - show warning earlier for small intervals (20% remaining)
+
+// Thresholds for determining "small" intervals
+const SMALL_INTERVAL_KM = 1500; // km
+const SMALL_INTERVAL_HOURS = 20; // hours
 
 /**
  * Calculate usage-based status
  * @param {number} currentUsage - Current vehicle usage
  * @param {number} lastServiceUsage - Usage when last serviced
  * @param {number} usageInterval - Interval between services
+ * @param {string} usageUnit - Unit of measurement ('km' or 'hours')
  * @returns {object} { percentage, isDue, isDueSoon }
  */
-function calculateUsageStatus(currentUsage, lastServiceUsage, usageInterval) {
+function calculateUsageStatus(currentUsage, lastServiceUsage, usageInterval, usageUnit = 'km') {
   if (!usageInterval || usageInterval === 0) {
     return null;
   }
@@ -20,13 +26,22 @@ function calculateUsageStatus(currentUsage, lastServiceUsage, usageInterval) {
   const usageSinceService = currentUsage - lastService;
   const percentage = usageSinceService / usageInterval;
 
+  // Determine threshold based on interval size
+  const isSmallInterval = usageUnit === 'hours'
+    ? usageInterval <= SMALL_INTERVAL_HOURS
+    : usageInterval <= SMALL_INTERVAL_KM;
+
+  const warningThreshold = isSmallInterval ? WARNING_THRESHOLD_SMALL : WARNING_THRESHOLD_LARGE;
+
   return {
     percentage,
     isDue: percentage >= 1,
-    isDueSoon: percentage >= WARNING_THRESHOLD && percentage < 1,
+    isDueSoon: percentage >= warningThreshold && percentage < 1,
     remaining: Math.max(0, usageInterval - usageSinceService),
   };
 }
+
+const SMALL_INTERVAL_DAYS = 30; // days
 
 /**
  * Calculate time-based status
@@ -47,10 +62,14 @@ function calculateTimeStatus(lastServiceDate, timeIntervalDays) {
   const daysSinceService = (now - lastService) / (1000 * 60 * 60 * 24);
   const percentage = daysSinceService / timeIntervalDays;
 
+  // Use earlier warning for small time intervals too
+  const isSmallInterval = timeIntervalDays <= SMALL_INTERVAL_DAYS;
+  const warningThreshold = isSmallInterval ? WARNING_THRESHOLD_SMALL : WARNING_THRESHOLD_LARGE;
+
   return {
     percentage,
     isDue: percentage >= 1,
-    isDueSoon: percentage >= WARNING_THRESHOLD && percentage < 1,
+    isDueSoon: percentage >= warningThreshold && percentage < 1,
     remaining: Math.max(0, timeIntervalDays - daysSinceService),
   };
 }
@@ -59,13 +78,15 @@ function calculateTimeStatus(lastServiceDate, timeIntervalDays) {
  * Get the overall maintenance status for an item
  * @param {object} item - Maintenance item with intervals and last service info
  * @param {number} currentUsage - Current vehicle usage
+ * @param {string} usageUnit - Unit of measurement ('km' or 'hours')
  * @returns {object} Status information
  */
-export function getMaintenanceStatus(item, currentUsage) {
+export function getMaintenanceStatus(item, currentUsage, usageUnit = 'km') {
   const usageStatus = calculateUsageStatus(
     currentUsage || 0,
     item.last_service_usage,
-    item.usage_interval
+    item.usage_interval,
+    usageUnit
   );
 
   const timeStatus = calculateTimeStatus(

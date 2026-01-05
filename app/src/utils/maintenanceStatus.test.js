@@ -154,6 +154,95 @@ describe('maintenanceStatus', () => {
 
       expect(status.percentage).toBe(1); // Capped at 100%
     });
+
+    it('should use 80% threshold for small km intervals (<= 1500km)', () => {
+      const item = {
+        usage_interval: 1000, // Small interval
+        last_service_usage: 0,
+        time_interval_days: null,
+        last_service_date: null,
+      };
+
+      // At 80% for small interval should trigger due_soon
+      const status = getMaintenanceStatus(item, 800, 'km');
+
+      expect(status.status).toBe('due_soon');
+      expect(status.percentage).toBe(0.8);
+      expect(status.primaryReason).toBe('usage');
+    });
+
+    it('should use 80% threshold for small hour intervals (<= 20 hours)', () => {
+      const item = {
+        usage_interval: 15, // Small interval (15 hours)
+        last_service_usage: 0,
+        time_interval_days: null,
+        last_service_date: null,
+      };
+
+      // At 80% for small interval should trigger due_soon
+      const status = getMaintenanceStatus(item, 12, 'hours');
+
+      expect(status.status).toBe('due_soon');
+      expect(status.percentage).toBe(0.8);
+      expect(status.primaryReason).toBe('usage');
+    });
+
+    it('should use 90% threshold for large km intervals (> 1500km)', () => {
+      const item = {
+        usage_interval: 5000, // Large interval
+        last_service_usage: 0,
+        time_interval_days: null,
+        last_service_date: null,
+      };
+
+      // At 80% for large interval should still be ok
+      const status80 = getMaintenanceStatus(item, 4000, 'km');
+      expect(status80.status).toBe('ok');
+
+      // At 90% for large interval should trigger due_soon
+      const status90 = getMaintenanceStatus(item, 4500, 'km');
+      expect(status90.status).toBe('due_soon');
+    });
+
+    it('should use 80% threshold for small time intervals (<= 30 days)', () => {
+      const now = new Date();
+      const lastService = new Date(now.getTime() - 24 * 24 * 60 * 60 * 1000); // 24 days ago
+
+      const item = {
+        usage_interval: null,
+        last_service_usage: null,
+        time_interval_days: 30, // Small time interval
+        last_service_date: lastService,
+      };
+
+      const status = getMaintenanceStatus(item, 0);
+
+      expect(status.status).toBe('due_soon');
+      expect(status.percentage).toBeCloseTo(0.8, 1);
+      expect(status.primaryReason).toBe('time');
+    });
+
+    it('should use 90% threshold for large time intervals (> 30 days)', () => {
+      const now = new Date();
+      const lastService80 = new Date(now.getTime() - 80 * 24 * 60 * 60 * 1000); // 80 days ago
+      const lastService90 = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); // 90 days ago
+
+      const item = {
+        usage_interval: null,
+        last_service_usage: null,
+        time_interval_days: 100, // Large time interval
+        last_service_date: lastService80,
+      };
+
+      // At 80% for large interval should still be ok
+      const status80 = getMaintenanceStatus(item, 0);
+      expect(status80.status).toBe('ok');
+
+      // At 90% for large interval should trigger due_soon
+      item.last_service_date = lastService90;
+      const status90 = getMaintenanceStatus(item, 0);
+      expect(status90.status).toBe('due_soon');
+    });
   });
 
   describe('getStatusBadgeVariant', () => {
