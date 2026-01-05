@@ -9,6 +9,11 @@ const VEHICLE_TYPES = [
   { value: 'other', label: 'Other' },
 ];
 
+const USAGE_UNITS = [
+  { value: 'km', label: 'Kilometers (km)' },
+  { value: 'hours', label: 'Hours' },
+];
+
 export default function CreateVehicleModal({ show, onHide, onVehicleCreated, teamId }) {
   const [formData, setFormData] = useState({
     name: '',
@@ -18,6 +23,7 @@ export default function CreateVehicleModal({ show, onHide, onVehicleCreated, tea
     year: '',
     race_number: '',
     current_usage: '',
+    usage_unit: 'km',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -49,6 +55,7 @@ export default function CreateVehicleModal({ show, onHide, onVehicleCreated, tea
         year: formData.year ? parseInt(formData.year) : null,
         race_number: formData.race_number.trim() || null,
         current_usage: formData.current_usage ? parseFloat(formData.current_usage) : 0,
+        usage_unit: formData.usage_unit,
       };
 
       const vehicleId = await createVehicle(vehicleData);
@@ -76,6 +83,7 @@ export default function CreateVehicleModal({ show, onHide, onVehicleCreated, tea
       year: '',
       race_number: '',
       current_usage: '',
+      usage_unit: 'km',
     });
   };
 
@@ -191,7 +199,29 @@ export default function CreateVehicleModal({ show, onHide, onVehicleCreated, tea
             </Col>
             <Col md={4}>
               <Form.Group className="mb-3">
-                <Form.Label>Current Usage (km)</Form.Label>
+                <Form.Label>Usage Unit</Form.Label>
+                <Form.Select
+                  name="usage_unit"
+                  value={formData.usage_unit}
+                  onChange={handleChange}
+                  disabled={loading || success}
+                >
+                  {USAGE_UNITS.map(unit => (
+                    <option key={unit.value} value={unit.value}>
+                      {unit.label}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Form.Group>
+            </Col>
+          </Row>
+
+          <Row>
+            <Col md={12}>
+              <Form.Group className="mb-3">
+                <Form.Label>
+                  Current Usage ({formData.usage_unit === 'km' ? 'kilometers' : 'hours'})
+                </Form.Label>
                 <Form.Control
                   type="number"
                   name="current_usage"

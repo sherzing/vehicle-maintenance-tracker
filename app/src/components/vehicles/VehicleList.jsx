@@ -21,9 +21,12 @@ export default function VehicleList({ vehicles, onVehicleSelect, onCreateVehicle
     );
   }
 
-  const formatUsage = (usage) => {
-    if (usage === null || usage === undefined) return '0 km';
-    return `${usage.toLocaleString()} km`;
+  const formatUsage = (usage, unit = 'km') => {
+    if (usage === null || usage === undefined) {
+      return unit === 'hours' ? '0 hours' : '0 km';
+    }
+    const unitLabel = unit === 'hours' ? 'hours' : 'km';
+    return `${usage.toLocaleString()} ${unitLabel}`;
   };
 
   const getVehicleLabel = (vehicle) => {
@@ -60,7 +63,7 @@ export default function VehicleList({ vehicles, onVehicleSelect, onCreateVehicle
                     {getVehicleLabel(vehicle)}
                   </small>
                   <small className="text-muted">
-                    Usage: {formatUsage(vehicle.current_usage)}
+                    Usage: {formatUsage(vehicle.current_usage, vehicle.usage_unit)}
                   </small>
                 </div>
                 <div className="d-flex flex-column align-items-end gap-1">
