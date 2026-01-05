@@ -10,6 +10,7 @@ export default function MaintenanceItemList({
   items,
   onCreateItem,
   onDeleteItem,
+  onLogService,
   usageUnit = 'km',
   currentUsage = 0,
 }) {
@@ -109,13 +110,22 @@ export default function MaintenanceItemList({
                   )}
                 </div>
 
-                <Button
-                  variant="outline-danger"
-                  size="sm"
-                  onClick={() => onDeleteItem(item.id)}
-                >
-                  Delete
-                </Button>
+                <div className="d-flex gap-2">
+                  <Button
+                    variant="outline-primary"
+                    size="sm"
+                    onClick={() => onLogService(item)}
+                  >
+                    Log Service
+                  </Button>
+                  <Button
+                    variant="outline-danger"
+                    size="sm"
+                    onClick={() => onDeleteItem(item.id)}
+                  >
+                    Delete
+                  </Button>
+                </div>
               </div>
             </ListGroup.Item>
           );

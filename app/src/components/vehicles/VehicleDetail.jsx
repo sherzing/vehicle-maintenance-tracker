@@ -4,6 +4,7 @@ import { getVehicle } from '../../services/firebase/vehicles';
 import { getVehicleMaintenanceItems, deleteMaintenanceItem } from '../../services/firebase/maintenanceItems';
 import MaintenanceItemList from '../maintenance/MaintenanceItemList';
 import CreateMaintenanceItemModal from '../maintenance/CreateMaintenanceItemModal';
+import LogServiceModal from '../maintenance/LogServiceModal';
 
 const VEHICLE_TYPE_LABELS = {
   car: 'Car',
@@ -18,6 +19,8 @@ export default function VehicleDetail({ vehicleId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showLogServiceModal, setShowLogServiceModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
 
   useEffect(() => {
     if (vehicleId) {
@@ -58,6 +61,15 @@ export default function VehicleDetail({ vehicleId }) {
   };
 
   const handleItemCreated = async () => {
+    await loadVehicleAndItems();
+  };
+
+  const handleLogService = (item) => {
+    setSelectedItem(item);
+    setShowLogServiceModal(true);
+  };
+
+  const handleServiceLogged = async () => {
     await loadVehicleAndItems();
   };
 
@@ -121,6 +133,7 @@ export default function VehicleDetail({ vehicleId }) {
         items={maintenanceItems}
         onCreateItem={() => setShowCreateModal(true)}
         onDeleteItem={handleDeleteItem}
+        onLogService={handleLogService}
         usageUnit={vehicle.usage_unit}
         currentUsage={vehicle.current_usage || 0}
       />
@@ -130,6 +143,15 @@ export default function VehicleDetail({ vehicleId }) {
         onHide={() => setShowCreateModal(false)}
         onItemCreated={handleItemCreated}
         vehicleId={vehicleId}
+        usageUnit={vehicle.usage_unit}
+      />
+
+      <LogServiceModal
+        show={showLogServiceModal}
+        onHide={() => setShowLogServiceModal(false)}
+        onServiceLogged={handleServiceLogged}
+        item={selectedItem}
+        currentUsage={vehicle.current_usage || 0}
         usageUnit={vehicle.usage_unit}
       />
     </div>
