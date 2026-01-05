@@ -113,7 +113,7 @@ export default function Dashboard() {
   };
 
   const handleVehicleClick = (vehicleId) => {
-    navigate('/vehicles');
+    navigate(`/vehicles?vehicleId=${vehicleId}`);
   };
 
   if (loading) {

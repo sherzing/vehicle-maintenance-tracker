@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Alert, Spinner, Dropdown } from 'react-bootstrap';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserTeams } from '../../services/firebase/teams';
 import { getTeamVehicles } from '../../services/firebase/vehicles';
@@ -9,6 +10,7 @@ import CreateVehicleModal from './CreateVehicleModal';
 
 export default function VehiclesPage() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [teams, setTeams] = useState([]);
   const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [vehicles, setVehicles] = useState([]);
@@ -26,6 +28,31 @@ export default function VehiclesPage() {
       loadVehicles();
     }
   }, [selectedTeamId]);
+
+  // Handle vehicle selection from URL on initial load
+  useEffect(() => {
+    const urlVehicleId = searchParams.get('vehicleId');
+    if (urlVehicleId && teams.length > 0 && !selectedVehicleId) {
+      findAndSelectVehicle(urlVehicleId);
+    }
+  }, [searchParams, teams]);
+
+  const findAndSelectVehicle = async (vehicleId) => {
+    // Search through all teams to find which team has this vehicle
+    for (const team of teams) {
+      try {
+        const teamVehicles = await getTeamVehicles(team.id);
+        if (teamVehicles.some(v => v.id === vehicleId)) {
+          // Found the vehicle in this team
+          setSelectedTeamId(team.id);
+          setSelectedVehicleId(vehicleId);
+          return;
+        }
+      } catch (err) {
+        console.error(`Failed to load vehicles for team ${team.id}:`, err);
+      }
+    }
+  };
 
   const loadTeams = async () => {
     if (!user) return;
@@ -57,8 +84,14 @@ export default function VehiclesPage() {
       const teamVehicles = await getTeamVehicles(selectedTeamId);
       setVehicles(teamVehicles);
 
-      // Auto-select first vehicle if none selected
-      if (teamVehicles.length > 0 && !selectedVehicleId) {
+      // Check if there's a vehicleId in the URL
+      const urlVehicleId = searchParams.get('vehicleId');
+
+      if (urlVehicleId && teamVehicles.some(v => v.id === urlVehicleId)) {
+        // Select the vehicle from the URL if it exists in the loaded vehicles
+        setSelectedVehicleId(urlVehicleId);
+      } else if (teamVehicles.length > 0 && !selectedVehicleId) {
+        // Auto-select first vehicle if none selected and no URL parameter
         setSelectedVehicleId(teamVehicles[0].id);
       }
     } catch (err) {
