@@ -22,8 +22,10 @@ export default function Dashboard() {
   const [vehicleStatusList, setVehicleStatusList] = useState([]);
 
   useEffect(() => {
-    loadDashboardData();
-  }, [user]);
+    if (user?.uid) {
+      loadDashboardData();
+    }
+  }, [user?.uid]);
 
   const loadDashboardData = async () => {
     if (!user) return;
@@ -128,10 +130,21 @@ export default function Dashboard() {
 
   return (
     <Container className="mt-4">
-      <Row>
+      <Row className="mb-4">
         <Col>
-          <h1>Dashboard</h1>
-          <p className="text-muted">Welcome, {user?.displayName || user?.email}!</p>
+          <div className="d-flex justify-content-between align-items-center">
+            <div>
+              <h1>Dashboard</h1>
+              <p className="text-muted mb-0">Welcome, {user?.displayName || user?.email}!</p>
+            </div>
+            <Button
+              variant="outline-primary"
+              onClick={loadDashboardData}
+              disabled={loading}
+            >
+              {loading ? 'Loading...' : 'Reload'}
+            </Button>
+          </div>
         </Col>
       </Row>
 
@@ -197,6 +210,17 @@ export default function Dashboard() {
           </Card>
         </Col>
       </Row>
+
+      {!loading && vehicleStatusList.length === 0 && maintenanceStats.totalVehicles === 0 && (
+        <Row className="mt-4">
+          <Col>
+            <Alert variant="info">
+              No vehicles found. Try clicking the <strong>Reload</strong> button above, or{' '}
+              <a href="/teams">create a team</a> and <a href="/vehicles">add a vehicle</a> to get started.
+            </Alert>
+          </Col>
+        </Row>
+      )}
 
       {vehicleStatusList.length > 0 ? (
         <Row className="mt-4">
