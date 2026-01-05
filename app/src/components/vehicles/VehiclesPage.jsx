@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getUserTeams } from '../../services/firebase/teams';
 import { getTeamVehicles } from '../../services/firebase/vehicles';
 import VehicleList from './VehicleList';
+import VehicleDetail from './VehicleDetail';
 import CreateVehicleModal from './CreateVehicleModal';
 
 export default function VehiclesPage() {
@@ -142,6 +143,9 @@ export default function VehiclesPage() {
             onVehicleSelect={setSelectedVehicleId}
             onCreateVehicle={() => setShowCreateModal(true)}
           />
+        </Col>
+        <Col md={6} lg={8}>
+          {selectedVehicleId && <VehicleDetail vehicleId={selectedVehicleId} />}
         </Col>
       </Row>
 

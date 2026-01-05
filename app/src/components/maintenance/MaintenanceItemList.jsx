@@ -1,0 +1,94 @@
+import { Card, ListGroup, Button, Badge } from 'react-bootstrap';
+
+export default function MaintenanceItemList({
+  items,
+  onCreateItem,
+  onDeleteItem,
+  usageUnit = 'km'
+}) {
+  if (!items || items.length === 0) {
+    return (
+      <Card>
+        <Card.Body className="text-center py-4">
+          <p className="text-muted mb-3">No maintenance items for this vehicle yet.</p>
+          <Button variant="primary" size="sm" onClick={onCreateItem}>
+            Add First Maintenance Item
+          </Button>
+        </Card.Body>
+      </Card>
+    );
+  }
+
+  const formatInterval = (value, unit) => {
+    if (value === null || value === undefined) return null;
+    return `${value.toLocaleString()} ${unit}`;
+  };
+
+  const formatDate = (timestamp) => {
+    if (!timestamp) return null;
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleDateString();
+  };
+
+  return (
+    <Card>
+      <Card.Header className="d-flex justify-content-between align-items-center">
+        <h6 className="mb-0">Maintenance Schedule</h6>
+        <Button variant="primary" size="sm" onClick={onCreateItem}>
+          + Add Item
+        </Button>
+      </Card.Header>
+      <ListGroup variant="flush">
+        {items.map((item) => {
+          const usageIntervalText = formatInterval(item.usage_interval, usageUnit);
+          const timeIntervalText = formatInterval(item.time_interval_days, 'days');
+          const lastServiceUsage = formatInterval(item.last_service_usage, usageUnit);
+          const lastServiceDate = formatDate(item.last_service_date);
+
+          return (
+            <ListGroup.Item key={item.id}>
+              <div className="d-flex justify-content-between align-items-start">
+                <div className="flex-grow-1">
+                  <div className="fw-semibold">{item.name}</div>
+
+                  <div className="mt-1">
+                    <small className="text-muted d-block">
+                      <strong>Intervals:</strong>
+                      {usageIntervalText && <span> Every {usageIntervalText}</span>}
+                      {usageIntervalText && timeIntervalText && <span> or</span>}
+                      {timeIntervalText && <span> Every {timeIntervalText}</span>}
+                    </small>
+                  </div>
+
+                  {(lastServiceUsage || lastServiceDate) && (
+                    <div className="mt-1">
+                      <small className="text-muted">
+                        <strong>Last service:</strong>
+                        {lastServiceUsage && <span> at {lastServiceUsage}</span>}
+                        {lastServiceDate && <span> on {lastServiceDate}</span>}
+                      </small>
+                    </div>
+                  )}
+
+                  {!lastServiceUsage && !lastServiceDate && (
+                    <div className="mt-1">
+                      <Badge bg="warning" text="dark">Never serviced</Badge>
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  variant="outline-danger"
+                  size="sm"
+                  onClick={() => onDeleteItem(item.id)}
+                >
+                  Delete
+                </Button>
+              </div>
+            </ListGroup.Item>
+          );
+        })}
+      </ListGroup>
+    </Card>
+  );
+}
