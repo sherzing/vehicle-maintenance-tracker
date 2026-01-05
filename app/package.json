@@ -25,7 +25,9 @@
     "deploy:prod:all": "npm run test:all && npm run build:prod && firebase deploy -P prod",
     "deploy:prod:rules": "firebase deploy --only firestore:rules -P prod",
     "deploy": "npm run deploy:dev",
-    "emulators": "firebase emulators:start"
+    "emulators": "firebase emulators:start",
+    "reset-db-dev": "node scripts/reset-db.js",
+    "seed-db-dev": "node scripts/seed-db.js"
   },
   "dependencies": {
     "bootstrap": "^5.3.8",
@@ -48,6 +50,7 @@
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
+    "firebase-admin": "^13.0.2",
     "firebase-tools": "^15.1.0",
     "globals": "^16.5.0",
     "happy-dom": "^20.0.11",
