@@ -6,6 +6,7 @@ import MaintenanceItemList from '../maintenance/MaintenanceItemList';
 import CreateMaintenanceItemModal from '../maintenance/CreateMaintenanceItemModal';
 import LogServiceModal from '../maintenance/LogServiceModal';
 import UpdateUsageModal from './UpdateUsageModal';
+import EditVehicleModal from './EditVehicleModal';
 
 const VEHICLE_TYPE_LABELS = {
   car: 'Car',
@@ -22,6 +23,7 @@ export default function VehicleDetail({ vehicleId }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showLogServiceModal, setShowLogServiceModal] = useState(false);
   const [showUpdateUsageModal, setShowUpdateUsageModal] = useState(false);
+  const [showEditVehicleModal, setShowEditVehicleModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
   useEffect(() => {
@@ -79,6 +81,10 @@ export default function VehicleDetail({ vehicleId }) {
     await loadVehicleAndItems();
   };
 
+  const handleVehicleUpdated = async () => {
+    await loadVehicleAndItems();
+  };
+
   if (loading) {
     return (
       <div className="text-center py-5">
@@ -122,13 +128,22 @@ export default function VehicleDetail({ vehicleId }) {
               <h4>{vehicle.name}</h4>
               <p className="text-muted mb-2">{getVehicleLabel()}</p>
             </div>
-            <Button
-              variant="outline-primary"
-              size="sm"
-              onClick={() => setShowUpdateUsageModal(true)}
-            >
-              Update Usage
-            </Button>
+            <div className="d-flex gap-2">
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={() => setShowEditVehicleModal(true)}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="outline-primary"
+                size="sm"
+                onClick={() => setShowUpdateUsageModal(true)}
+              >
+                Update Usage
+              </Button>
+            </div>
           </div>
           <div className="d-flex gap-3 mb-2">
             <div>
@@ -176,6 +191,13 @@ export default function VehicleDetail({ vehicleId }) {
         show={showUpdateUsageModal}
         onHide={() => setShowUpdateUsageModal(false)}
         onUsageUpdated={handleUsageUpdated}
+        vehicle={vehicle}
+      />
+
+      <EditVehicleModal
+        show={showEditVehicleModal}
+        onHide={() => setShowEditVehicleModal(false)}
+        onVehicleUpdated={handleVehicleUpdated}
         vehicle={vehicle}
       />
     </div>
