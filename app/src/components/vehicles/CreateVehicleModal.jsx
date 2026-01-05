@@ -69,7 +69,15 @@ export default function CreateVehicleModal({ show, onHide, onVehicleCreated, tea
       }, 1000);
     } catch (err) {
       console.error('Failed to create vehicle:', err);
-      setError(err.message || 'Failed to create vehicle. Please try again.');
+
+      // Check if it's a network/firestore connectivity issue
+      let errorMessage = err.message || 'Failed to create vehicle. Please try again.';
+
+      if (err.code === 'unavailable' || err.message?.includes('Failed to fetch')) {
+        errorMessage = 'Unable to connect to the server. Please check your internet connection or disable ad blockers that might be blocking Firestore.';
+      }
+
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -88,11 +96,19 @@ export default function CreateVehicleModal({ show, onHide, onVehicleCreated, tea
   };
 
   const handleClose = () => {
-    if (!loading && !success) {
-      resetForm();
-      setError(null);
-      onHide();
+    // Always allow closing, but warn if loading
+    if (loading) {
+      if (!confirm('Vehicle creation is in progress. Are you sure you want to cancel?')) {
+        return;
+      }
     }
+
+    // Reset all states when closing
+    setLoading(false);
+    setSuccess(false);
+    setError(null);
+    resetForm();
+    onHide();
   };
 
   return (
@@ -237,7 +253,7 @@ export default function CreateVehicleModal({ show, onHide, onVehicleCreated, tea
           </Row>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleClose} disabled={loading || success}>
+          <Button variant="secondary" onClick={handleClose} disabled={success}>
             Cancel
           </Button>
           <Button variant="primary" type="submit" disabled={loading || success}>
