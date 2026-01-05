@@ -7,6 +7,8 @@ export default function CreateMaintenanceItemModal({ show, onHide, onItemCreated
     name: '',
     usage_interval: '',
     time_interval_days: '',
+    last_service_usage: '',
+    last_service_date: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -39,8 +41,8 @@ export default function CreateMaintenanceItemModal({ show, onHide, onItemCreated
         name: formData.name.trim(),
         usage_interval: formData.usage_interval ? parseFloat(formData.usage_interval) : null,
         time_interval_days: formData.time_interval_days ? parseInt(formData.time_interval_days) : null,
-        last_service_usage: null,
-        last_service_date: null,
+        last_service_usage: formData.last_service_usage ? parseFloat(formData.last_service_usage) : null,
+        last_service_date: formData.last_service_date ? new Date(formData.last_service_date) : null,
       };
 
       const itemId = await createMaintenanceItem(itemData);
@@ -64,6 +66,8 @@ export default function CreateMaintenanceItemModal({ show, onHide, onItemCreated
       name: '',
       usage_interval: '',
       time_interval_days: '',
+      last_service_usage: '',
+      last_service_date: '',
     });
   };
 
@@ -138,11 +142,49 @@ export default function CreateMaintenanceItemModal({ show, onHide, onItemCreated
             </Col>
           </Row>
 
-          <Alert variant="info" className="mb-0">
+          <Alert variant="info" className="mb-3">
             <small>
               <strong>Note:</strong> You must specify at least one interval. Both can be set, and the item will be due based on whichever comes first.
             </small>
           </Alert>
+
+          <h6 className="mb-3">Last Service (Optional)</h6>
+          <Row>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>Last Service Usage ({usageLabel})</Form.Label>
+                <Form.Control
+                  type="number"
+                  name="last_service_usage"
+                  placeholder={`e.g., ${usageUnit === 'hours' ? '25' : '45000'}`}
+                  value={formData.last_service_usage}
+                  onChange={handleChange}
+                  disabled={loading || success}
+                  min="0"
+                  step="0.1"
+                />
+                <Form.Text className="text-muted">
+                  Usage when last serviced
+                </Form.Text>
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>Last Service Date</Form.Label>
+                <Form.Control
+                  type="date"
+                  name="last_service_date"
+                  value={formData.last_service_date}
+                  onChange={handleChange}
+                  disabled={loading || success}
+                  max={new Date().toISOString().split('T')[0]}
+                />
+                <Form.Text className="text-muted">
+                  Date when last serviced
+                </Form.Text>
+              </Form.Group>
+            </Col>
+          </Row>
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleClose} disabled={loading || success}>
