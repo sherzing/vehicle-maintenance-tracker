@@ -27,7 +27,8 @@
     "deploy": "npm run deploy:dev",
     "emulators": "firebase emulators:start",
     "reset-db-dev": "node scripts/reset-db.js",
-    "seed-db-dev": "node scripts/seed-db.js"
+    "seed-db-dev": "node scripts/seed-db.js",
+    "capture-mockups": "node mockups/dark/capture-screenshots.mjs"
   },
   "dependencies": {
     "bootstrap": "^5.3.8",

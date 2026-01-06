@@ -1,0 +1,257 @@
+/* Dashboard Page Styles */
+
+/* Page Header */
+.minimalist-page-header {
+  margin-bottom: var(--spacing-xl);
+}
+
+.minimalist-page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: var(--spacing-xs);
+  letter-spacing: -0.5px;
+}
+
+.minimalist-page-subtitle {
+  color: var(--gray-500);
+  font-size: 1rem;
+}
+
+/* Team Selector */
+.minimalist-team-selector {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.minimalist-team-selector label {
+  display: block;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin-bottom: var(--spacing-sm);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.minimalist-team-select {
+  width: 100%;
+  max-width: 300px;
+  padding: 0.75rem var(--spacing-md);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+  font-size: 1rem;
+  color: var(--gray-800);
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.minimalist-team-select:hover {
+  border-color: var(--primary-blue);
+}
+
+.minimalist-team-select:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Filters */
+.minimalist-filters {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xl);
+  flex-wrap: wrap;
+}
+
+.minimalist-filter-btn {
+  padding: 0.625rem 1.25rem;
+  border: 1px solid var(--gray-200);
+  background: white;
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.minimalist-filter-btn:hover {
+  border-color: var(--primary-blue);
+  color: var(--primary-blue);
+  background: #eff6ff;
+}
+
+.minimalist-filter-btn.active {
+  background: var(--primary-blue);
+  color: white;
+  border-color: var(--primary-blue);
+}
+
+/* Vehicle Grid */
+.minimalist-vehicles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+/* Vehicle Card */
+.minimalist-vehicle-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  border: 1px solid var(--gray-200);
+  transition: all 0.3s;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+
+.minimalist-vehicle-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--gray-300);
+}
+
+.minimalist-vehicle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 1.25rem;
+}
+
+.minimalist-vehicle-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 0.25rem;
+}
+
+.minimalist-vehicle-model {
+  color: var(--gray-500);
+  font-size: 0.875rem;
+}
+
+/* Vehicle Stats */
+.minimalist-vehicle-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.minimalist-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.minimalist-stat-label {
+  color: var(--gray-500);
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.minimalist-stat-value {
+  color: var(--gray-900);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+/* Next Service Section */
+.minimalist-next-service {
+  background: var(--gray-50);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--primary-blue);
+}
+
+.minimalist-next-service-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--spacing-xs);
+}
+
+.minimalist-next-service-item {
+  color: var(--gray-900);
+  font-weight: 500;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.minimalist-next-service-due {
+  color: var(--gray-500);
+  font-size: 0.813rem;
+}
+
+.minimalist-next-service.status-warning,
+.minimalist-next-service.status-due-soon,
+.minimalist-next-service.status-due_soon {
+  background: var(--yellow-50);
+  border-left-color: var(--yellow-500);
+}
+
+.minimalist-next-service.status-overdue {
+  background: var(--red-50);
+  border-left-color: var(--red-500);
+}
+
+/* Empty State */
+.minimalist-empty-state {
+  text-align: center;
+  padding: 4rem var(--spacing-xl);
+  background: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+}
+
+.minimalist-empty-state-icon {
+  font-size: 3rem;
+  margin-bottom: var(--spacing-md);
+  opacity: 0.3;
+}
+
+.minimalist-empty-state-text {
+  color: var(--gray-500);
+  font-size: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .minimalist-page-title {
+    font-size: 1.5rem;
+  }
+
+  .minimalist-vehicles-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .minimalist-filters {
+    gap: var(--spacing-xs);
+  }
+
+  .minimalist-filter-btn {
+    font-size: 0.813rem;
+    padding: 0.5rem var(--spacing-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .minimalist-vehicle-stats {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+}

@@ -1,0 +1,258 @@
+/* Vehicle Detail Page Styles */
+
+/* Vehicle Hero */
+.minimalist-vehicle-hero {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+  border: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-sm);
+}
+
+.minimalist-vehicle-hero-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: var(--spacing-lg);
+}
+
+.minimalist-vehicle-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: var(--spacing-xs);
+  letter-spacing: -0.5px;
+}
+
+.minimalist-vehicle-subtitle {
+  color: var(--gray-500);
+  font-size: 1rem;
+}
+
+/* Vehicle Stats Grid */
+.minimalist-vehicle-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-xl);
+}
+
+.minimalist-vehicle-stats .minimalist-stat-label {
+  color: var(--gray-500);
+  font-size: 0.813rem;
+  font-weight: 500;
+  margin-bottom: var(--spacing-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.minimalist-vehicle-stats .minimalist-stat-value {
+  color: var(--gray-900);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.minimalist-stat-subtext {
+  color: var(--gray-500);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+/* Maintenance Item */
+.minimalist-maintenance-item {
+  padding: var(--spacing-lg) 0;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.minimalist-maintenance-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.minimalist-maintenance-item:first-child {
+  padding-top: 0;
+}
+
+.minimalist-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: var(--spacing-md);
+}
+
+.minimalist-item-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: 0.25rem;
+}
+
+.minimalist-item-subtitle {
+  color: var(--gray-500);
+  font-size: 0.875rem;
+}
+
+.minimalist-item-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.minimalist-item-status.status-good,
+.minimalist-item-status.status-ok {
+  color: var(--green-600);
+}
+
+.minimalist-item-status.status-warning,
+.minimalist-item-status.status-due-soon,
+.minimalist-item-status.status-due_soon {
+  color: var(--yellow-600);
+}
+
+.minimalist-item-status.status-overdue {
+  color: var(--red-600);
+}
+
+/* Progress Bar */
+.minimalist-progress-container {
+  margin-bottom: var(--spacing-sm);
+}
+
+.minimalist-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--gray-100);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.minimalist-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green-500), var(--green-600));
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.minimalist-progress-fill.status-warning,
+.minimalist-progress-fill.status-due-soon,
+.minimalist-progress-fill.status-due_soon {
+  background: linear-gradient(90deg, var(--yellow-400), var(--yellow-500));
+}
+
+.minimalist-progress-fill.status-overdue {
+  background: linear-gradient(90deg, var(--red-400), var(--red-500));
+}
+
+.minimalist-progress-text {
+  display: flex;
+  justify-content: space-between;
+  color: var(--gray-500);
+  font-size: 0.813rem;
+  margin-top: var(--spacing-xs);
+}
+
+/* Service History */
+.minimalist-history-item {
+  display: flex;
+  gap: var(--spacing-lg);
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.minimalist-history-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.minimalist-history-item:first-child {
+  padding-top: 0;
+}
+
+.minimalist-history-date {
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.minimalist-history-date-day {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.minimalist-history-date-month {
+  color: var(--gray-500);
+  font-size: 0.875rem;
+}
+
+.minimalist-history-content {
+  flex: 1;
+}
+
+.minimalist-history-title {
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: 0.25rem;
+}
+
+.minimalist-history-description {
+  color: var(--gray-500);
+  font-size: 0.875rem;
+  margin-bottom: var(--spacing-xs);
+}
+
+.minimalist-history-meta {
+  display: flex;
+  gap: var(--spacing-lg);
+  color: var(--gray-400);
+  font-size: 0.813rem;
+}
+
+.minimalist-history-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .minimalist-vehicle-title {
+    font-size: 1.5rem;
+  }
+
+  .minimalist-vehicle-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-lg);
+  }
+
+  .minimalist-vehicle-stats .minimalist-stat-value {
+    font-size: 1.5rem;
+  }
+
+  .minimalist-vehicle-hero {
+    padding: var(--spacing-lg);
+  }
+
+  .minimalist-history-item {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .minimalist-history-date {
+    min-width: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .minimalist-vehicle-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .minimalist-vehicle-hero-header {
+    flex-direction: column;
+    gap: var(--spacing-md);
+  }
+}

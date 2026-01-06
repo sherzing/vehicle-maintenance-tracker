@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Modal, Button, Form, Alert } from 'react-bootstrap';
-import { logService } from '../../services/firebase/maintenanceItems';
+import { logRepair } from '../../services/firebase/maintenanceItems';
 
-export default function LogServiceModal({ show, onHide, onServiceLogged, item, currentUsage, usageUnit = 'km' }) {
+export default function LogRepairModal({ show, onHide, onRepairLogged, vehicle }) {
   const [formData, setFormData] = useState({
-    serviceUsage: currentUsage || '',
+    description: '',
     serviceDate: new Date().toISOString().split('T')[0],
     cost: '',
     provider: '',
@@ -23,37 +23,42 @@ export default function LogServiceModal({ show, onHide, onServiceLogged, item, c
     setError(null);
     setSuccess(false);
 
-    if (!formData.serviceUsage && !formData.serviceDate) {
-      setError('Please provide either service usage or service date');
+    if (!formData.description || !formData.description.trim()) {
+      setError('Please provide a repair description');
+      return;
+    }
+
+    if (!formData.serviceDate) {
+      setError('Please provide the repair date');
       return;
     }
 
     setLoading(true);
     try {
-      const serviceUsage = formData.serviceUsage ? parseFloat(formData.serviceUsage) : null;
       const serviceDate = formData.serviceDate ? new Date(formData.serviceDate) : null;
       const cost = formData.cost ? parseFloat(formData.cost) : null;
       const provider = formData.provider ? formData.provider.trim() : null;
+      const description = formData.description.trim();
 
-      await logService(item.id, serviceUsage, serviceDate, cost, provider);
+      await logRepair(vehicle.id, description, serviceDate, cost, provider);
       setSuccess(true);
 
       setTimeout(() => {
         setSuccess(false);
         resetForm();
-        onServiceLogged();
+        onRepairLogged();
         onHide();
       }, 1000);
     } catch (err) {
-      console.error('Failed to log service:', err);
-      setError(err.message || 'Failed to log service. Please try again.');
+      console.error('Failed to log repair:', err);
+      setError(err.message || 'Failed to log repair. Please try again.');
       setLoading(false);
     }
   };
 
   const resetForm = () => {
     setFormData({
-      serviceUsage: currentUsage || '',
+      description: '',
       serviceDate: new Date().toISOString().split('T')[0],
       cost: '',
       provider: '',
@@ -68,46 +73,44 @@ export default function LogServiceModal({ show, onHide, onServiceLogged, item, c
     }
   };
 
-  const usageLabel = usageUnit === 'hours' ? 'hours' : 'km';
+  if (!vehicle) return null;
 
   return (
     <Modal show={show} onHide={handleClose} centered>
       <Modal.Header closeButton>
-        <Modal.Title>Log Service</Modal.Title>
+        <Modal.Title>Log Repair</Modal.Title>
       </Modal.Header>
       <Form onSubmit={handleSubmit}>
         <Modal.Body>
           {error && <Alert variant="danger">{error}</Alert>}
-          {success && <Alert variant="success">Service logged successfully!</Alert>}
+          {success && <Alert variant="success">Repair logged successfully!</Alert>}
 
-          {item && (
-            <div className="mb-3">
-              <h6>{item.name}</h6>
-              <small className="text-muted">
-                Record when this service was performed to reset the maintenance schedule.
-              </small>
-            </div>
-          )}
+          <div className="mb-3">
+            <h6>{vehicle.name}</h6>
+            <small className="text-muted">
+              Record any repairs, part replacements, or maintenance work performed on this vehicle.
+            </small>
+          </div>
 
           <Form.Group className="mb-3">
-            <Form.Label>Service Usage ({usageLabel})</Form.Label>
+            <Form.Label>Repair Description</Form.Label>
             <Form.Control
-              type="number"
-              name="serviceUsage"
-              placeholder={`Current: ${currentUsage || 0} ${usageLabel}`}
-              value={formData.serviceUsage}
+              as="textarea"
+              rows={3}
+              name="description"
+              placeholder="e.g., Replaced front brake pads, Changed oil, Fixed engine light"
+              value={formData.description}
               onChange={handleChange}
               disabled={loading || success}
-              min="0"
-              step="0.1"
+              required
             />
             <Form.Text className="text-muted">
-              The usage reading when the service was performed
+              Describe what was repaired or replaced
             </Form.Text>
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label>Service Date</Form.Label>
+            <Form.Label>Repair Date</Form.Label>
             <Form.Control
               type="date"
               name="serviceDate"
@@ -115,9 +118,10 @@ export default function LogServiceModal({ show, onHide, onServiceLogged, item, c
               onChange={handleChange}
               disabled={loading || success}
               max={new Date().toISOString().split('T')[0]}
+              required
             />
             <Form.Text className="text-muted">
-              When the service was performed
+              When the repair was performed
             </Form.Text>
           </Form.Group>
 
@@ -126,7 +130,7 @@ export default function LogServiceModal({ show, onHide, onServiceLogged, item, c
             <Form.Control
               type="number"
               name="cost"
-              placeholder="Enter service cost"
+              placeholder="Enter repair cost"
               value={formData.cost}
               onChange={handleChange}
               disabled={loading || success}
@@ -134,7 +138,7 @@ export default function LogServiceModal({ show, onHide, onServiceLogged, item, c
               step="0.01"
             />
             <Form.Text className="text-muted">
-              Total cost of the service
+              Total cost of the repair
             </Form.Text>
           </Form.Group>
 
@@ -143,13 +147,13 @@ export default function LogServiceModal({ show, onHide, onServiceLogged, item, c
             <Form.Control
               type="text"
               name="provider"
-              placeholder="e.g., Main Street Garage"
+              placeholder="e.g., Main Street Garage, DIY"
               value={formData.provider}
               onChange={handleChange}
               disabled={loading || success}
             />
             <Form.Text className="text-muted">
-              Name of the service provider or mechanic
+              Who performed the repair
             </Form.Text>
           </Form.Group>
         </Modal.Body>
@@ -158,7 +162,7 @@ export default function LogServiceModal({ show, onHide, onServiceLogged, item, c
             Cancel
           </Button>
           <Button variant="primary" type="submit" disabled={loading || success}>
-            {loading ? 'Logging...' : success ? 'Logged!' : 'Log Service'}
+            {loading ? 'Logging...' : success ? 'Logged!' : 'Log Repair'}
           </Button>
         </Modal.Footer>
       </Form>

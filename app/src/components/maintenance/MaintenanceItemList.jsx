@@ -9,7 +9,7 @@ import {
 export default function MaintenanceItemList({
   items,
   onCreateItem,
-  onDeleteItem,
+  onEditItem,
   onLogService,
   usageUnit = 'km',
   currentUsage = 0,
@@ -119,11 +119,11 @@ export default function MaintenanceItemList({
                     Log Service
                   </Button>
                   <Button
-                    variant="outline-danger"
+                    variant="outline-secondary"
                     size="sm"
-                    onClick={() => onDeleteItem(item.id)}
+                    onClick={() => onEditItem(item)}
                   >
-                    Delete
+                    Edit
                   </Button>
                 </div>
               </div>

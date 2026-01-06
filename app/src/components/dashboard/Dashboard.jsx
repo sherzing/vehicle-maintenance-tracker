@@ -1,53 +1,72 @@
 import { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Alert, Spinner, Badge, ListGroup, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import { Spinner, Alert } from 'react-bootstrap';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserTeams } from '../../services/firebase/teams';
 import { getTeamVehicles } from '../../services/firebase/vehicles';
 import { getVehicleMaintenanceItems } from '../../services/firebase/maintenanceItems';
-import { getMaintenanceStatus, getStatusBadgeVariant, getStatusText } from '../../utils/maintenanceStatus';
+import { getMaintenanceStatus, getStatusText } from '../../utils/maintenanceStatus';
+import { calculateNextServiceDue } from '../../utils/vehicleStats';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [vehicles, setVehicles] = useState([]);
-  const [maintenanceStats, setMaintenanceStats] = useState({
-    totalVehicles: 0,
-    totalItems: 0,
-    overdueCount: 0,
-    dueSoonCount: 0,
-  });
+  const [teams, setTeams] = useState([]);
+  const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [vehicleStatusList, setVehicleStatusList] = useState([]);
+  const [filterStatus, setFilterStatus] = useState('all');
 
   useEffect(() => {
     if (user?.uid) {
-      loadDashboardData();
+      loadTeams();
     }
   }, [user?.uid]);
 
+  useEffect(() => {
+    if (selectedTeamId) {
+      loadDashboardData();
+    }
+  }, [selectedTeamId]);
+
+  const loadTeams = async () => {
+    try {
+      const userTeams = await getUserTeams(user.uid);
+      setTeams(userTeams);
+
+      // Get selected team from localStorage or use first team
+      const storedTeamId = localStorage.getItem('selectedTeamId');
+      if (storedTeamId && userTeams.some(t => t.id === storedTeamId)) {
+        setSelectedTeamId(storedTeamId);
+      } else if (userTeams.length > 0) {
+        setSelectedTeamId(userTeams[0].id);
+        localStorage.setItem('selectedTeamId', userTeams[0].id);
+      } else {
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error('Failed to load teams:', err);
+      setError('Failed to load teams. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleTeamChange = (e) => {
+    const teamId = e.target.value;
+    setSelectedTeamId(teamId);
+    localStorage.setItem('selectedTeamId', teamId);
+  };
+
   const loadDashboardData = async () => {
-    if (!user) return;
+    if (!user || !selectedTeamId) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      // Load all teams for the user
-      const teams = await getUserTeams(user.uid);
-
-      if (teams.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      // Load all vehicles from all teams
-      const vehiclePromises = teams.map(team => getTeamVehicles(team.id));
-      const vehicleArrays = await Promise.all(vehiclePromises);
-      const allVehicles = vehicleArrays.flat();
-
-      setVehicles(allVehicles);
+      // Load vehicles for the selected team
+      const allVehicles = await getTeamVehicles(selectedTeamId);
 
       // Load maintenance items for each vehicle
       const vehicleData = await Promise.all(
@@ -57,20 +76,13 @@ export default function Dashboard() {
         })
       );
 
-      // Calculate statistics
-      let totalItems = 0;
-      let overdueCount = 0;
-      let dueSoonCount = 0;
+      // Calculate statistics for each vehicle
       const statusList = [];
 
       vehicleData.forEach(({ vehicle, items }) => {
-        totalItems += items.length;
-
         // Calculate status for each maintenance item
         const itemStatuses = items.map(item => {
           const status = getMaintenanceStatus(item, vehicle.current_usage || 0, vehicle.usage_unit || 'km');
-          if (status.status === 'overdue') overdueCount++;
-          if (status.status === 'due_soon') dueSoonCount++;
           return { item, status };
         });
 
@@ -82,12 +94,18 @@ export default function Dashboard() {
           vehicleStatus = 'due_soon';
         }
 
+        // Calculate next service due using utility function
+        const nextServiceInfo = calculateNextServiceDue(
+          items,
+          vehicle.current_usage || 0,
+          vehicle.usage_unit || 'km'
+        );
+
         statusList.push({
           vehicle,
           status: vehicleStatus,
           itemCount: items.length,
-          overdueItems: itemStatuses.filter(is => is.status.status === 'overdue').length,
-          dueSoonItems: itemStatuses.filter(is => is.status.status === 'due_soon').length,
+          nextServiceInfo,
         });
       });
 
@@ -97,12 +115,6 @@ export default function Dashboard() {
         return statusOrder[a.status] - statusOrder[b.status];
       });
 
-      setMaintenanceStats({
-        totalVehicles: allVehicles.length,
-        totalItems,
-        overdueCount,
-        dueSoonCount,
-      });
       setVehicleStatusList(statusList);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
@@ -116,37 +128,39 @@ export default function Dashboard() {
     navigate(`/vehicles?vehicleId=${vehicleId}`);
   };
 
-  if (loading) {
+  const getFilteredVehicles = () => {
+    switch (filterStatus) {
+      case 'overdue':
+        return vehicleStatusList.filter(v => v.status === 'overdue');
+      case 'due_soon':
+        return vehicleStatusList.filter(v => v.status === 'due_soon');
+      case 'good':
+        return vehicleStatusList.filter(v => v.status === 'ok');
+      case 'all':
+      default:
+        return vehicleStatusList;
+    }
+  };
+
+  const filteredVehicles = getFilteredVehicles();
+
+  if (loading && !selectedTeamId) {
     return (
-      <Container className="mt-5 text-center">
+      <div className="minimalist-container" style={{ textAlign: 'center', paddingTop: '4rem' }}>
         <Spinner animation="border" role="status">
           <span className="visually-hidden">Loading...</span>
         </Spinner>
-      </Container>
+      </div>
     );
   }
 
-  const hasTeams = vehicles.length > 0 || !loading;
-
   return (
-    <Container className="mt-4">
-      <Row className="mb-4">
-        <Col>
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <h1>Dashboard</h1>
-              <p className="text-muted mb-0">Welcome, {user?.displayName || user?.email}!</p>
-            </div>
-            <Button
-              variant="outline-primary"
-              onClick={loadDashboardData}
-              disabled={loading}
-            >
-              {loading ? 'Loading...' : 'Reload'}
-            </Button>
-          </div>
-        </Col>
-      </Row>
+    <div className="minimalist-container">
+      {/* Page Header */}
+      <div className="minimalist-page-header">
+        <h1 className="minimalist-page-title">Dashboard</h1>
+        <p className="minimalist-page-subtitle">Welcome, {user?.displayName || user?.email}!</p>
+      </div>
 
       {error && (
         <Alert variant="danger" dismissible onClose={() => setError(null)}>
@@ -154,148 +168,130 @@ export default function Dashboard() {
         </Alert>
       )}
 
-      <Row className="mt-4">
-        <Col md={4}>
-          <Card className="h-100">
-            <Card.Body>
-              <Card.Title>Vehicles</Card.Title>
-              <Card.Text className="display-4">{maintenanceStats.totalVehicles}</Card.Text>
-              <Card.Text className="text-muted">
-                {maintenanceStats.totalVehicles === 0 ? 'No vehicles yet' : 'Total vehicles'}
-              </Card.Text>
-            </Card.Body>
-          </Card>
-        </Col>
-
-        <Col md={4}>
-          <Card className="h-100">
-            <Card.Body>
-              <Card.Title>Maintenance Items</Card.Title>
-              <Card.Text className="display-4">{maintenanceStats.totalItems}</Card.Text>
-              <Card.Text className="text-muted">
-                {maintenanceStats.totalItems === 0 ? 'No items tracked' : 'Total maintenance items'}
-              </Card.Text>
-            </Card.Body>
-          </Card>
-        </Col>
-
-        <Col md={4}>
-          <Card className="h-100">
-            <Card.Body>
-              <Card.Title>Service Status</Card.Title>
-              <div className="d-flex gap-3 align-items-center">
-                {maintenanceStats.overdueCount > 0 && (
-                  <div>
-                    <div className="display-4 text-danger">{maintenanceStats.overdueCount}</div>
-                    <small className="text-muted">Overdue</small>
-                  </div>
-                )}
-                {maintenanceStats.dueSoonCount > 0 && (
-                  <div>
-                    <div className="display-4 text-warning">{maintenanceStats.dueSoonCount}</div>
-                    <small className="text-muted">Due Soon</small>
-                  </div>
-                )}
-                {maintenanceStats.overdueCount === 0 && maintenanceStats.dueSoonCount === 0 && maintenanceStats.totalItems > 0 && (
-                  <div>
-                    <div className="display-4 text-success">✓</div>
-                    <small className="text-muted">All caught up!</small>
-                  </div>
-                )}
-                {maintenanceStats.totalItems === 0 && (
-                  <small className="text-muted">No maintenance items yet</small>
-                )}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-
-      {!loading && vehicleStatusList.length === 0 && maintenanceStats.totalVehicles === 0 && (
-        <Row className="mt-4">
-          <Col>
-            <Alert variant="info">
-              No vehicles found. Try clicking the <strong>Reload</strong> button above, or{' '}
-              <a href="/teams">create a team</a> and <a href="/vehicles">add a vehicle</a> to get started.
-            </Alert>
-          </Col>
-        </Row>
+      {/* Team Selector */}
+      {teams.length > 0 && (
+        <div className="minimalist-team-selector">
+          <label htmlFor="team-select">Select Team</label>
+          <select
+            id="team-select"
+            className="minimalist-team-select"
+            value={selectedTeamId || ''}
+            onChange={handleTeamChange}
+          >
+            {teams.map(team => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
+          </select>
+        </div>
       )}
 
-      {vehicleStatusList.length > 0 ? (
-        <Row className="mt-4">
-          <Col>
-            <Card>
-              <Card.Header>
-                <h5 className="mb-0">Your Vehicles</h5>
-              </Card.Header>
-              <ListGroup variant="flush">
-                {vehicleStatusList.map(({ vehicle, status, itemCount, overdueItems, dueSoonItems }) => {
-                  const statusVariant = getStatusBadgeVariant(status);
-                  const statusText = getStatusText(status);
+      {teams.length === 0 && !loading && (
+        <Alert variant="info">
+          No teams found. <a href="/teams">Create a team</a> to get started.
+        </Alert>
+      )}
 
-                  return (
-                    <ListGroup.Item
-                      key={vehicle.id}
-                      action
-                      onClick={() => handleVehicleClick(vehicle.id)}
-                      className="cursor-pointer"
-                    >
-                      <div className="d-flex justify-content-between align-items-center">
-                        <div>
-                          <div className="d-flex align-items-center gap-2 mb-1">
-                            <strong>{vehicle.name}</strong>
-                            <Badge bg={statusVariant}>{statusText}</Badge>
-                          </div>
-                          <small className="text-muted">
-                            {itemCount} maintenance item{itemCount !== 1 ? 's' : ''}
-                            {overdueItems > 0 && (
-                              <span className="text-danger ms-2">
-                                • {overdueItems} overdue
-                              </span>
-                            )}
-                            {dueSoonItems > 0 && (
-                              <span className="text-warning ms-2">
-                                • {dueSoonItems} due soon
-                              </span>
-                            )}
-                          </small>
-                        </div>
-                        <div className="text-muted">
-                          <small>Click to view →</small>
+      {selectedTeamId && vehicleStatusList.length === 0 && !loading && (
+        <Alert variant="info">
+          No vehicles found in this team. <a href="/vehicles">Add a vehicle</a> to get started.
+        </Alert>
+      )}
+
+      {selectedTeamId && vehicleStatusList.length > 0 && (
+        <>
+          {/* Filters */}
+          <div className="minimalist-filters">
+            <button
+              className={`minimalist-filter-btn ${filterStatus === 'all' ? 'active' : ''}`}
+              onClick={() => setFilterStatus('all')}
+            >
+              All Vehicles ({vehicleStatusList.length})
+            </button>
+            <button
+              className={`minimalist-filter-btn ${filterStatus === 'overdue' ? 'active' : ''}`}
+              onClick={() => setFilterStatus('overdue')}
+            >
+              Overdue ({vehicleStatusList.filter(v => v.status === 'overdue').length})
+            </button>
+            <button
+              className={`minimalist-filter-btn ${filterStatus === 'due_soon' ? 'active' : ''}`}
+              onClick={() => setFilterStatus('due_soon')}
+            >
+              Due Soon ({vehicleStatusList.filter(v => v.status === 'due_soon').length})
+            </button>
+            <button
+              className={`minimalist-filter-btn ${filterStatus === 'good' ? 'active' : ''}`}
+              onClick={() => setFilterStatus('good')}
+            >
+              Good Standing ({vehicleStatusList.filter(v => v.status === 'ok').length})
+            </button>
+          </div>
+
+          {/* Vehicle Cards Grid */}
+          {filteredVehicles.length === 0 ? (
+            <div className="minimalist-empty-state">
+              <div className="minimalist-empty-state-icon">🚗</div>
+              <p className="minimalist-empty-state-text">
+                {filterStatus === 'overdue' && 'No vehicles with overdue maintenance'}
+                {filterStatus === 'due_soon' && 'No vehicles with maintenance due soon'}
+                {filterStatus === 'good' && 'No vehicles in good standing'}
+              </p>
+            </div>
+          ) : (
+            <div className="minimalist-vehicles-grid">
+              {filteredVehicles.map(({ vehicle, status, itemCount, nextServiceInfo }) => {
+                const statusText = getStatusText(status);
+                const usageLabel = vehicle.usage_unit === 'hours' ? 'hours' : 'km';
+                const currentUsage = vehicle.current_usage || 0;
+
+                return (
+                  <div
+                    key={vehicle.id}
+                    className="minimalist-vehicle-card"
+                    onClick={() => handleVehicleClick(vehicle.id)}
+                  >
+                    {/* Vehicle Header */}
+                    <div className="minimalist-vehicle-header">
+                      <div>
+                        <div className="minimalist-vehicle-name">{vehicle.name}</div>
+                        <div className="minimalist-vehicle-model">{vehicle.make} {vehicle.model}</div>
+                      </div>
+                      <span className={`minimalist-status-badge status-${status}`}>
+                        {statusText}
+                      </span>
+                    </div>
+
+                    {/* Vehicle Stats */}
+                    <div className="minimalist-vehicle-stats">
+                      <div className="minimalist-stat">
+                        <div className="minimalist-stat-label">Current Usage</div>
+                        <div className="minimalist-stat-value">
+                          {currentUsage.toLocaleString()} <span style={{ fontSize: '0.75rem', fontWeight: '400' }}>{usageLabel}</span>
                         </div>
                       </div>
-                    </ListGroup.Item>
-                  );
-                })}
-              </ListGroup>
-            </Card>
-          </Col>
-        </Row>
-      ) : (
-        <Row className="mt-4">
-          <Col>
-            <Card>
-              <Card.Body>
-                <Card.Title>Getting Started</Card.Title>
-                <Card.Text>
-                  Welcome to Vehicle Maintenance Tracker! Here&apos;s what you can do:
-                </Card.Text>
-                <ul>
-                  <li>Create or join a team to manage vehicles with others</li>
-                  <li>Add your vehicles (cars, motorcycles, bicycles, etc.)</li>
-                  <li>Define maintenance schedules with usage and time intervals</li>
-                  <li>Track service history and get alerts when maintenance is due</li>
-                </ul>
-                <Card.Text>
-                  <a href="/teams">Go to Teams</a> to get started, or{' '}
-                  <a href="/vehicles">add a vehicle</a> now.
-                </Card.Text>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
+                      <div className="minimalist-stat">
+                        <div className="minimalist-stat-label">Maintenance Items</div>
+                        <div className="minimalist-stat-value">{itemCount}</div>
+                      </div>
+                    </div>
+
+                    {/* Next Service */}
+                    {nextServiceInfo && (
+                      <div className={`minimalist-next-service status-${status}`}>
+                        <div className="minimalist-next-service-title">Next Service</div>
+                        <div className="minimalist-next-service-item">{nextServiceInfo.name}</div>
+                        <div className="minimalist-next-service-due">{nextServiceInfo.remaining}</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
-    </Container>
+    </div>
   );
 }

@@ -63,9 +63,14 @@ export default function VehiclesPage() {
       const userTeams = await getUserTeams(user.uid);
       setTeams(userTeams);
 
-      // Auto-select first team if none selected
-      if (userTeams.length > 0 && !selectedTeamId) {
+      // Use selected team from localStorage (set by header dropdown)
+      const savedTeamId = localStorage.getItem('selectedTeamId');
+      if (savedTeamId && userTeams.some(t => t.id === savedTeamId)) {
+        setSelectedTeamId(savedTeamId);
+      } else if (userTeams.length > 0) {
+        // Auto-select first team if none selected
         setSelectedTeamId(userTeams[0].id);
+        localStorage.setItem('selectedTeamId', userTeams[0].id);
       }
     } catch (err) {
       console.error('Failed to load teams:', err);
@@ -160,7 +165,10 @@ export default function VehiclesPage() {
                     <Dropdown.Item
                       key={team.id}
                       active={team.id === selectedTeamId}
-                      onClick={() => setSelectedTeamId(team.id)}
+                      onClick={() => {
+                        setSelectedTeamId(team.id);
+                        localStorage.setItem('selectedTeamId', team.id);
+                      }}
                     >
                       {team.name}
                     </Dropdown.Item>
