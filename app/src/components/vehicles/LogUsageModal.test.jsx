@@ -279,7 +279,8 @@ describe('LogUsageModal', () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(screen.getByText(/Failed to log/i)).toBeInTheDocument();
+      // Error message is sanitized - expect generic create error
+      expect(screen.getByText(/Unable to create resource/i)).toBeInTheDocument();
     });
 
     expect(mockOnUsageLogged).not.toHaveBeenCalled();

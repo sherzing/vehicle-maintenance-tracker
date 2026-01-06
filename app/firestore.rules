@@ -87,6 +87,27 @@ service cloud.firestore {
 
     // Usage history collection
     match /usage_history/{historyId} {
+      // Helper function to validate usage history data
+      function isValidUsageData(data) {
+        return data.vehicle_id is string &&
+               data.vehicle_id.size() > 0 &&
+               data.vehicle_id.size() <= 1500 &&
+               data.usage is number &&
+               data.usage >= 0 &&
+               data.usage < 10000000 &&
+               data.date is timestamp &&
+               data.date <= request.time &&
+               (data.usage_type == null || (data.usage_type is string && data.usage_type.size() <= 500)) &&
+               (data.location == null || (data.location is string && data.location.size() <= 500)) &&
+               data.created_by is string &&
+               data.created_at is timestamp &&
+               (data.updated_at == null || data.updated_at is timestamp) &&
+               (data.updated_by == null || data.updated_by is string) &&
+               data.version is int &&
+               data.version >= 1 &&
+               data.version < 1000000;
+      }
+
       // Users can access usage history for vehicles in their teams
       allow read: if isAuthenticated() &&
                     isTeamMember(get(/databases/$(database)/documents/vehicles/$(resource.data.vehicle_id)).data.team_id);
@@ -95,15 +116,20 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
                       isTeamMember(get(/databases/$(database)/documents/vehicles/$(request.resource.data.vehicle_id)).data.team_id) &&
                       request.resource.data.created_by == request.auth.uid &&
-                      request.resource.data.usage is number &&
-                      request.resource.data.usage >= 0 &&
-                      request.resource.data.usage < 10000000 &&
-                      request.resource.data.date is timestamp &&
-                      request.resource.data.date <= request.time;
+                      request.resource.data.version == 1 &&
+                      isValidUsageData(request.resource.data);
 
-      // Users can update/delete usage history in their teams
-      allow update, delete: if isAuthenticated() &&
-                              isTeamMember(get(/databases/$(database)/documents/vehicles/$(resource.data.vehicle_id)).data.team_id);
+      // Users can update usage history with validation
+      allow update: if isAuthenticated() &&
+                      isTeamMember(get(/databases/$(database)/documents/vehicles/$(resource.data.vehicle_id)).data.team_id) &&
+                      isValidUsageData(request.resource.data) &&
+                      request.resource.data.vehicle_id == resource.data.vehicle_id &&
+                      request.resource.data.created_by == resource.data.created_by &&
+                      request.resource.data.version == resource.data.version + 1;
+
+      // Users can delete usage history in their teams
+      allow delete: if isAuthenticated() &&
+                      isTeamMember(get(/databases/$(database)/documents/vehicles/$(resource.data.vehicle_id)).data.team_id);
     }
   }
 }

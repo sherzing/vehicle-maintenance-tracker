@@ -9,6 +9,7 @@ import {
   query,
   where,
   serverTimestamp,
+  runTransaction,
 } from 'firebase/firestore';
 import { db } from './config';
 import { updateVehicle } from './vehicles';
@@ -204,6 +205,7 @@ export async function logUsageUpdate(vehicleId, usage, date, usageType = null, l
     created_by: userId,
     created_at: serverTimestamp(),
     updated_at: null,
+    version: 1,
   };
 
   const usageRef = await addDoc(collection(db, 'usage_history'), usageEntry);
@@ -244,42 +246,59 @@ export async function getVehicleUsageHistory(vehicleId) {
 
 /**
  * Update a usage history entry and recalculate vehicle.current_usage
+ * Uses optimistic locking with version field to prevent race conditions
  * @param {string} historyId - Usage history entry ID
  * @param {number} usage - Updated usage value
  * @param {Date} date - Updated date
  * @param {string} usageType - Optional usage type
  * @param {string} location - Optional location
+ * @param {string} userId - User ID who is updating this entry
+ * @param {number} expectedVersion - Optional expected version for optimistic locking
+ * @throws {Error} If version conflict detected (concurrent modification)
  */
-export async function updateUsageHistory(historyId, usage, date, usageType = null, location = null) {
+export async function updateUsageHistory(historyId, usage, date, usageType = null, location = null, userId, expectedVersion = null) {
   // Validate all inputs
   validateHistoryId(historyId);
   validateUsage(usage);
   validateDate(date);
+  validateUserId(userId);
 
   const validatedUsageType = validateTextInput(usageType, 'usage type');
   const validatedLocation = validateTextInput(location, 'location');
 
-  // Get the usage history entry to find the vehicle_id
   const historyRef = doc(db, 'usage_history', historyId);
-  const historySnap = await getDoc(historyRef);
 
-  if (!historySnap.exists()) {
-    throw new Error('Usage history entry not found');
-  }
+  // Use transaction for atomic read-check-write with version checking
+  const vehicleId = await runTransaction(db, async (transaction) => {
+    const historySnap = await transaction.get(historyRef);
 
-  const historyData = historySnap.data();
-  const vehicleId = historyData.vehicle_id;
+    if (!historySnap.exists()) {
+      throw new Error('Usage history entry not found');
+    }
 
-  // Validate the vehicle_id from the database
-  validateVehicleId(vehicleId);
+    const historyData = historySnap.data();
+    const currentVersion = historyData.version || 1;
 
-  // Update the usage history entry
-  await updateDoc(historyRef, {
-    usage: usage,
-    date: date,
-    usage_type: validatedUsageType,
-    location: validatedLocation,
-    updated_at: serverTimestamp(),
+    // Check for version conflict if expectedVersion was provided
+    if (expectedVersion !== null && currentVersion !== expectedVersion) {
+      throw new Error('Version conflict: This entry was modified by another user. Please refresh and try again.');
+    }
+
+    const vehicleId = historyData.vehicle_id;
+    validateVehicleId(vehicleId);
+
+    // Update with incremented version
+    transaction.update(historyRef, {
+      usage: usage,
+      date: date,
+      usage_type: validatedUsageType,
+      location: validatedLocation,
+      updated_at: serverTimestamp(),
+      updated_by: userId,
+      version: currentVersion + 1,
+    });
+
+    return vehicleId;
   });
 
   // Recalculate current_usage to most recent by date

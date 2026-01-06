@@ -15,6 +15,10 @@ describe('EditUsageModal', () => {
     date: new Date('2024-01-15'),
     usage_type: 'track day',
     location: 'Laguna Seca',
+    version: 1,
+  };
+  const mockUser = {
+    uid: 'user123',
   };
 
   beforeEach(() => {
@@ -30,6 +34,7 @@ describe('EditUsageModal', () => {
         onUsageUpdated={mockOnUsageUpdated}
         usageEntry={mockUsageEntry}
         usageUnit="km"
+        user={mockUser}
       />
     );
 
@@ -44,6 +49,7 @@ describe('EditUsageModal', () => {
         onUsageUpdated={mockOnUsageUpdated}
         usageEntry={mockUsageEntry}
         usageUnit="km"
+        user={mockUser}
       />
     );
 
@@ -58,6 +64,7 @@ describe('EditUsageModal', () => {
         onUsageUpdated={mockOnUsageUpdated}
         usageEntry={mockUsageEntry}
         usageUnit="km"
+        user={mockUser}
       />
     );
 
@@ -85,6 +92,7 @@ describe('EditUsageModal', () => {
         onUsageUpdated={mockOnUsageUpdated}
         usageEntry={entryWithTimestamp}
         usageUnit="km"
+        user={mockUser}
       />
     );
 
@@ -100,6 +108,7 @@ describe('EditUsageModal', () => {
         onUsageUpdated={mockOnUsageUpdated}
         usageEntry={mockUsageEntry}
         usageUnit="km"
+        user={mockUser}
       />
     );
 
@@ -123,6 +132,7 @@ describe('EditUsageModal', () => {
         onUsageUpdated={mockOnUsageUpdated}
         usageEntry={mockUsageEntry}
         usageUnit="km"
+        user={mockUser}
       />
     );
 
@@ -152,6 +162,7 @@ describe('EditUsageModal', () => {
         onUsageUpdated={mockOnUsageUpdated}
         usageEntry={mockUsageEntry}
         usageUnit="km"
+        user={mockUser}
       />
     );
 
@@ -171,7 +182,9 @@ describe('EditUsageModal', () => {
         52000,
         new Date('2024-01-15'),
         'road trip',
-        'Laguna Seca'
+        'Laguna Seca',
+        'user123',
+        1 // version
       );
     });
 
@@ -187,6 +200,7 @@ describe('EditUsageModal', () => {
       date: new Date('2024-01-10'),
       usage_type: null,
       location: null,
+      version: 2,
     };
 
     usageHistoryService.updateUsageHistory.mockResolvedValue();
@@ -198,6 +212,7 @@ describe('EditUsageModal', () => {
         onUsageUpdated={mockOnUsageUpdated}
         usageEntry={entryWithoutOptionals}
         usageUnit="km"
+        user={mockUser}
       />
     );
 
@@ -218,6 +233,7 @@ describe('EditUsageModal', () => {
         onUsageUpdated={mockOnUsageUpdated}
         usageEntry={mockUsageEntry}
         usageUnit="km"
+        user={mockUser}
       />
     );
 
@@ -226,7 +242,8 @@ describe('EditUsageModal', () => {
     fireEvent.submit(form);
 
     await waitFor(() => {
-      expect(screen.getByText(/Update failed/i)).toBeInTheDocument();
+      // Error message is sanitized - expect generic update error
+      expect(screen.getByText(/Unable to update resource/i)).toBeInTheDocument();
     });
 
     expect(mockOnUsageUpdated).not.toHaveBeenCalled();
@@ -240,6 +257,7 @@ describe('EditUsageModal', () => {
         onUsageUpdated={mockOnUsageUpdated}
         usageEntry={mockUsageEntry}
         usageUnit="km"
+        user={mockUser}
       />
     );
 
@@ -273,6 +291,7 @@ describe('EditUsageModal', () => {
         onUsageUpdated={mockOnUsageUpdated}
         usageEntry={mockUsageEntry}
         usageUnit="km"
+        user={mockUser}
       />
     );
 
@@ -289,7 +308,9 @@ describe('EditUsageModal', () => {
         50000.5,
         expect.any(Date),
         'track day',
-        'Laguna Seca'
+        'Laguna Seca',
+        'user123',
+        1 // version
       );
     });
   });
@@ -302,6 +323,7 @@ describe('EditUsageModal', () => {
         onUsageUpdated={mockOnUsageUpdated}
         usageEntry={null}
         usageUnit="km"
+        user={mockUser}
       />
     );
 

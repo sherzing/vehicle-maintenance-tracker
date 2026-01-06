@@ -10,6 +10,9 @@ vi.mock('../../services/firebase/usageHistory');
 describe('ServiceHistory', () => {
   const mockVehicleId = 'vehicle123';
   const mockUsageUnit = 'km';
+  const mockUser = {
+    uid: 'user123',
+  };
 
   const mockServiceHistory = [
     {
@@ -56,7 +59,7 @@ describe('ServiceHistory', () => {
     maintenanceItemsService.getVehicleServiceHistory.mockImplementation(() => new Promise(() => {}));
     usageHistoryService.getVehicleUsageHistory.mockImplementation(() => new Promise(() => {}));
 
-    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} />);
+    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} user={mockUser} />);
 
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.getByText('Loading...')).toBeInTheDocument();
@@ -66,7 +69,7 @@ describe('ServiceHistory', () => {
     maintenanceItemsService.getVehicleServiceHistory.mockResolvedValue(mockServiceHistory);
     usageHistoryService.getVehicleUsageHistory.mockResolvedValue(mockUsageHistory);
 
-    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} />);
+    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} user={mockUser} />);
 
     await waitFor(() => {
       expect(screen.getByText('Oil Change')).toBeInTheDocument();
@@ -81,7 +84,7 @@ describe('ServiceHistory', () => {
     maintenanceItemsService.getVehicleServiceHistory.mockResolvedValue(mockServiceHistory);
     usageHistoryService.getVehicleUsageHistory.mockResolvedValue(mockUsageHistory);
 
-    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} />);
+    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} user={mockUser} />);
 
     await waitFor(() => {
       expect(screen.getByText(/Usage Update: 46,000 km/)).toBeInTheDocument();
@@ -98,7 +101,7 @@ describe('ServiceHistory', () => {
     maintenanceItemsService.getVehicleServiceHistory.mockResolvedValue(mockServiceHistory);
     usageHistoryService.getVehicleUsageHistory.mockResolvedValue(mockUsageHistory);
 
-    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} />);
+    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} user={mockUser} />);
 
     await waitFor(() => {
       expect(screen.getByText('Oil Change')).toBeInTheDocument();
@@ -157,7 +160,7 @@ describe('ServiceHistory', () => {
     maintenanceItemsService.getVehicleServiceHistory.mockResolvedValue(mockServiceHistory);
     usageHistoryService.getVehicleUsageHistory.mockResolvedValue(mockUsageHistory);
 
-    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} />);
+    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} user={mockUser} />);
 
     await waitFor(() => {
       expect(screen.getByText('4 entries')).toBeInTheDocument();
@@ -169,7 +172,7 @@ describe('ServiceHistory', () => {
     maintenanceItemsService.getVehicleServiceHistory.mockResolvedValue(mockServiceHistory);
     usageHistoryService.getVehicleUsageHistory.mockResolvedValue(mockUsageHistory);
 
-    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} />);
+    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} user={mockUser} />);
 
     await waitFor(() => {
       expect(screen.getByText(/Usage Update: 46,000 km/)).toBeInTheDocument();
@@ -190,7 +193,7 @@ describe('ServiceHistory', () => {
     maintenanceItemsService.getVehicleServiceHistory.mockResolvedValue(mockServiceHistory);
     usageHistoryService.getVehicleUsageHistory.mockResolvedValue(mockUsageHistory);
 
-    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} />);
+    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} user={mockUser} />);
 
     await waitFor(() => {
       expect(screen.getByText('Oil Change')).toBeInTheDocument();
@@ -218,7 +221,7 @@ describe('ServiceHistory', () => {
     maintenanceItemsService.getVehicleServiceHistory.mockResolvedValue(mockServiceHistory);
     usageHistoryService.getVehicleUsageHistory.mockResolvedValue(mockUsageHistory);
 
-    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} />);
+    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} user={mockUser} />);
 
     await waitFor(() => {
       expect(screen.getByText('Oil Change')).toBeInTheDocument();
@@ -237,7 +240,7 @@ describe('ServiceHistory', () => {
     maintenanceItemsService.getVehicleServiceHistory.mockResolvedValue([]);
     usageHistoryService.getVehicleUsageHistory.mockResolvedValue(mockUsageHistory);
 
-    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} />);
+    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} user={mockUser} />);
 
     await waitFor(() => {
       expect(screen.getByText(/Usage Update: 46,000 km/)).toBeInTheDocument();
@@ -251,7 +254,7 @@ describe('ServiceHistory', () => {
     maintenanceItemsService.getVehicleServiceHistory.mockResolvedValue([]);
     usageHistoryService.getVehicleUsageHistory.mockResolvedValue([mockUsageHistory[1]]);
 
-    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} />);
+    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} user={mockUser} />);
 
     await waitFor(() => {
       expect(screen.getByText(/Usage Update: 43,000 km/)).toBeInTheDocument();
@@ -266,7 +269,7 @@ describe('ServiceHistory', () => {
     maintenanceItemsService.getVehicleServiceHistory.mockResolvedValue([]);
     usageHistoryService.getVehicleUsageHistory.mockResolvedValue([mockUsageHistory[0]]);
 
-    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} />);
+    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} user={mockUser} />);
 
     await waitFor(() => {
       expect(screen.getByText(/Usage Update: 46,000 km/)).toBeInTheDocument();
@@ -285,10 +288,11 @@ describe('ServiceHistory', () => {
     maintenanceItemsService.getVehicleServiceHistory.mockRejectedValue(new Error('Failed to load'));
     usageHistoryService.getVehicleUsageHistory.mockRejectedValue(new Error('Failed to load'));
 
-    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} />);
+    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} user={mockUser} />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Failed to load history/i)).toBeInTheDocument();
+      // Error message is sanitized - expect generic fetch error
+      expect(screen.getByText(/Unable to load data/i)).toBeInTheDocument();
     });
   });
 
@@ -296,7 +300,7 @@ describe('ServiceHistory', () => {
     maintenanceItemsService.getVehicleServiceHistory.mockResolvedValue([]);
     usageHistoryService.getVehicleUsageHistory.mockResolvedValue([]);
 
-    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} />);
+    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} user={mockUser} />);
 
     await waitFor(() => {
       expect(screen.getByText(/No history yet/i)).toBeInTheDocument();
@@ -307,7 +311,7 @@ describe('ServiceHistory', () => {
     maintenanceItemsService.getVehicleServiceHistory.mockResolvedValue([mockServiceHistory[0]]);
     usageHistoryService.getVehicleUsageHistory.mockResolvedValue([]);
 
-    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} />);
+    render(<ServiceHistory vehicleId={mockVehicleId} usageUnit={mockUsageUnit} user={mockUser} />);
 
     await waitFor(() => {
       expect(screen.getByText('Oil Change')).toBeInTheDocument();

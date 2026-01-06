@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Modal, Button, Form, Alert } from 'react-bootstrap';
 import { logUsageUpdate } from '../../services/firebase/usageHistory';
 import { rateLimiter } from '../../utils/rateLimiter';
+import { handleError } from '../../utils/errorHandler';
 
 export default function LogUsageModal({ show, onHide, onUsageLogged, vehicle, user }) {
   // Get today's date in YYYY-MM-DD format
@@ -83,8 +84,7 @@ export default function LogUsageModal({ show, onHide, onUsageLogged, vehicle, us
         onHide();
       }, 1000);
     } catch (err) {
-      console.error('Failed to log usage:', err);
-      setError(err.message || 'Failed to log usage. Please try again.');
+      setError(handleError(err, 'create'));
       setLoading(false);
     }
   };

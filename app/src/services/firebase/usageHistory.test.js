@@ -20,6 +20,7 @@ vi.mock('firebase/firestore', () => ({
   query: vi.fn(),
   where: vi.fn(),
   serverTimestamp: vi.fn(() => 'TIMESTAMP'),
+  runTransaction: vi.fn(),
 }));
 
 vi.mock('./config', () => ({
@@ -56,7 +57,7 @@ describe('usageHistory service', () => {
       const date = new Date('2024-01-20');
       await logUsageUpdate('vehicle123', 55000, date, 'track day', 'Laguna Seca', 'user123');
 
-      // Check that addDoc was called with correct data
+      // Check that addDoc was called with correct data including version
       const addDocCall = firestore.addDoc.mock.calls[0];
       expect(addDocCall[1]).toMatchObject({
         vehicle_id: 'vehicle123',
@@ -65,6 +66,7 @@ describe('usageHistory service', () => {
         usage_type: 'track day',
         location: 'Laguna Seca',
         created_by: 'user123',
+        version: 1,
       });
 
       // Check that vehicle.current_usage was updated
@@ -218,14 +220,22 @@ describe('usageHistory service', () => {
 
   describe('updateUsageHistory', () => {
     it('should update usage history entry and recalculate current_usage', async () => {
-      // Mock getDoc for the usage entry being updated
-      firestore.getDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({
-          vehicle_id: 'vehicle123',
-          usage: 45000,
-          date: new Date('2024-01-10'),
+      // Mock runTransaction to execute the callback
+      const mockTransaction = {
+        get: vi.fn().mockResolvedValue({
+          exists: () => true,
+          data: () => ({
+            vehicle_id: 'vehicle123',
+            usage: 45000,
+            date: new Date('2024-01-10'),
+            version: 1,
+          }),
         }),
+        update: vi.fn(),
+      };
+
+      firestore.runTransaction.mockImplementation(async (db, callback) => {
+        return await callback(mockTransaction);
       });
 
       // Mock getDocs for recalculation - most recent becomes 52000 on Jan 25
@@ -249,15 +259,17 @@ describe('usageHistory service', () => {
       });
 
       const newDate = new Date('2024-01-25');
-      await updateUsageHistory('usage1', 52000, newDate, 'track day', 'Sonoma');
+      await updateUsageHistory('usage1', 52000, newDate, 'track day', 'Sonoma', 'user123');
 
-      // Check that updateDoc was called
-      const updateDocCall = firestore.updateDoc.mock.calls[0];
-      expect(updateDocCall[1]).toMatchObject({
+      // Check that transaction.update was called with incremented version
+      expect(mockTransaction.update).toHaveBeenCalled();
+      const updateCall = mockTransaction.update.mock.calls[0];
+      expect(updateCall[1]).toMatchObject({
         usage: 52000,
         date: newDate,
         usage_type: 'track day',
         location: 'Sonoma',
+        version: 2, // Version should be incremented
       });
 
       // Check that current_usage was recalculated
@@ -267,24 +279,39 @@ describe('usageHistory service', () => {
     });
 
     it('should throw error when usage history entry does not exist', async () => {
-      firestore.getDoc.mockResolvedValue({
-        exists: () => false,
+      const mockTransaction = {
+        get: vi.fn().mockResolvedValue({
+          exists: () => false,
+        }),
+        update: vi.fn(),
+      };
+
+      firestore.runTransaction.mockImplementation(async (db, callback) => {
+        return await callback(mockTransaction);
       });
 
       await expect(
-        updateUsageHistory('nonexistent', 50000, new Date())
+        updateUsageHistory('nonexistent', 50000, new Date(), null, null, 'user123')
       ).rejects.toThrow('Usage history entry not found');
     });
 
     it('should recalculate to different entry when date changes', async () => {
-      // Mock getDoc for the entry being updated
-      firestore.getDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({
-          vehicle_id: 'vehicle123',
-          usage: 55000,
-          date: new Date('2024-01-25'),
+      // Mock runTransaction for the entry being updated
+      const mockTransaction = {
+        get: vi.fn().mockResolvedValue({
+          exists: () => true,
+          data: () => ({
+            vehicle_id: 'vehicle123',
+            usage: 55000,
+            date: new Date('2024-01-25'),
+            version: 1,
+          }),
         }),
+        update: vi.fn(),
+      };
+
+      firestore.runTransaction.mockImplementation(async (db, callback) => {
+        return await callback(mockTransaction);
       });
 
       // After update, a different entry is most recent
@@ -309,11 +336,117 @@ describe('usageHistory service', () => {
 
       // Change date from Jan 25 to Jan 15 (makes it no longer most recent)
       const newDate = new Date('2024-01-15');
-      await updateUsageHistory('usage1', 50000, newDate, null, null);
+      await updateUsageHistory('usage1', 50000, newDate, null, null, 'user123');
 
       // Should recalculate to 48000 (new most recent on Jan 20)
       expect(vehicles.updateVehicle).toHaveBeenCalledWith('vehicle123', {
         current_usage: 48000,
+      });
+    });
+
+    it('should throw version conflict error when expectedVersion does not match', async () => {
+      // Mock runTransaction with version 3 in database
+      const mockTransaction = {
+        get: vi.fn().mockResolvedValue({
+          exists: () => true,
+          data: () => ({
+            vehicle_id: 'vehicle123',
+            usage: 45000,
+            date: new Date('2024-01-10'),
+            version: 3, // Current version is 3
+          }),
+        }),
+        update: vi.fn(),
+      };
+
+      firestore.runTransaction.mockImplementation(async (db, callback) => {
+        return await callback(mockTransaction);
+      });
+
+      // Try to update with expectedVersion = 1 (conflict!)
+      await expect(
+        updateUsageHistory('usage1', 50000, new Date('2024-01-15'), null, null, 'user123', 1)
+      ).rejects.toThrow('Version conflict: This entry was modified by another user. Please refresh and try again.');
+    });
+
+    it('should increment version without conflict when expectedVersion is null', async () => {
+      // Mock runTransaction with version 5 in database
+      const mockTransaction = {
+        get: vi.fn().mockResolvedValue({
+          exists: () => true,
+          data: () => ({
+            vehicle_id: 'vehicle123',
+            usage: 45000,
+            date: new Date('2024-01-10'),
+            version: 5,
+          }),
+        }),
+        update: vi.fn(),
+      };
+
+      firestore.runTransaction.mockImplementation(async (db, callback) => {
+        return await callback(mockTransaction);
+      });
+
+      // Mock getDocs for recalculation
+      firestore.getDocs.mockResolvedValue({
+        docs: [{
+          id: 'usage1',
+          data: () => ({
+            usage: 50000,
+            date: new Date('2024-01-15'),
+          }),
+        }],
+      });
+
+      const newDate = new Date('2024-01-15');
+      // Not passing expectedVersion (null) - should succeed regardless of current version
+      await updateUsageHistory('usage1', 50000, newDate, null, null, 'user123');
+
+      // Should increment version from 5 to 6
+      const updateCall = mockTransaction.update.mock.calls[0];
+      expect(updateCall[1]).toMatchObject({
+        version: 6,
+      });
+    });
+
+    it('should handle entries without version field (legacy data)', async () => {
+      // Mock runTransaction with no version field (legacy entry)
+      const mockTransaction = {
+        get: vi.fn().mockResolvedValue({
+          exists: () => true,
+          data: () => ({
+            vehicle_id: 'vehicle123',
+            usage: 45000,
+            date: new Date('2024-01-10'),
+            // No version field
+          }),
+        }),
+        update: vi.fn(),
+      };
+
+      firestore.runTransaction.mockImplementation(async (db, callback) => {
+        return await callback(mockTransaction);
+      });
+
+      // Mock getDocs for recalculation
+      firestore.getDocs.mockResolvedValue({
+        docs: [{
+          id: 'usage1',
+          data: () => ({
+            usage: 50000,
+            date: new Date('2024-01-15'),
+          }),
+        }],
+      });
+
+      const newDate = new Date('2024-01-15');
+      await updateUsageHistory('usage1', 50000, newDate, null, null, 'user123');
+
+      // Should default to version 1 and increment to 2
+      const updateCall = mockTransaction.update.mock.calls[0];
+      expect(updateCall[1]).toMatchObject({
+        version: 2, // 1 (default) + 1
       });
     });
   });

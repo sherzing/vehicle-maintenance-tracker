@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { Modal, Button, Form, Alert } from 'react-bootstrap';
 import { updateUsageHistory, deleteUsageHistory } from '../../services/firebase/usageHistory';
 import { rateLimiter } from '../../utils/rateLimiter';
+import { handleError } from '../../utils/errorHandler';
 
-export default function EditUsageModal({ show, onHide, onUsageUpdated, usageEntry, usageUnit = 'km' }) {
+export default function EditUsageModal({ show, onHide, onUsageUpdated, usageEntry, usageUnit = 'km', user }) {
   const [formData, setFormData] = useState({
     usage: '',
     date: '',
@@ -72,7 +73,8 @@ export default function EditUsageModal({ show, onHide, onUsageUpdated, usageEntr
       const usageType = formData.usageType ? formData.usageType.trim() : null;
       const location = formData.location ? formData.location.trim() : null;
 
-      await updateUsageHistory(usageEntry.id, usageValue, date, usageType, location);
+      // Pass version for optimistic locking to prevent race conditions
+      await updateUsageHistory(usageEntry.id, usageValue, date, usageType, location, user?.uid, usageEntry.version);
 
       // Record successful operation for rate limiting
       rateLimiter.recordOperation(rateLimitKey);
@@ -85,8 +87,7 @@ export default function EditUsageModal({ show, onHide, onUsageUpdated, usageEntr
         onHide();
       }, 1000);
     } catch (err) {
-      console.error('Failed to update usage:', err);
-      setError(err.message || 'Failed to update usage. Please try again.');
+      setError(handleError(err, 'update'));
       setLoading(false);
     }
   };
@@ -119,8 +120,7 @@ export default function EditUsageModal({ show, onHide, onUsageUpdated, usageEntr
         onHide();
       }, 500);
     } catch (err) {
-      console.error('Failed to delete usage:', err);
-      setError(err.message || 'Failed to delete usage. Please try again.');
+      setError(handleError(err, 'delete'));
       setDeleting(false);
     }
   };

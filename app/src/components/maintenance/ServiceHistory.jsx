@@ -5,8 +5,9 @@ import { getVehicleUsageHistory } from '../../services/firebase/usageHistory';
 import EditServiceModal from './EditServiceModal';
 import EditUsageModal from './EditUsageModal';
 import { sanitizeText } from '../../utils/sanitize';
+import { handleError } from '../../utils/errorHandler';
 
-export default function ServiceHistory({ vehicleId, usageUnit = 'km' }) {
+export default function ServiceHistory({ vehicleId, usageUnit = 'km', user }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -49,8 +50,7 @@ export default function ServiceHistory({ vehicleId, usageUnit = 'km' }) {
 
       setHistory(allHistory);
     } catch (err) {
-      console.error('Failed to load history:', err);
-      setError('Failed to load history. Please try again.');
+      setError(handleError(err, 'fetch'));
     } finally {
       setLoading(false);
     }
@@ -226,6 +226,7 @@ export default function ServiceHistory({ vehicleId, usageUnit = 'km' }) {
         onUsageUpdated={handleUpdated}
         usageEntry={selectedUsageEntry}
         usageUnit={usageUnit}
+        user={user}
       />
     </Card>
   );
