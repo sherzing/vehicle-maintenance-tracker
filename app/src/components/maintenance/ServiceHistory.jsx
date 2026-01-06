@@ -4,6 +4,7 @@ import { getVehicleServiceHistory } from '../../services/firebase/maintenanceIte
 import { getVehicleUsageHistory } from '../../services/firebase/usageHistory';
 import EditServiceModal from './EditServiceModal';
 import EditUsageModal from './EditUsageModal';
+import { sanitizeText } from '../../utils/sanitize';
 
 export default function ServiceHistory({ vehicleId, usageUnit = 'km' }) {
   const [history, setHistory] = useState([]);
@@ -183,12 +184,12 @@ export default function ServiceHistory({ vehicleId, usageUnit = 'km' }) {
                     </small>
                     {entry.historyType === 'usage' && entry.usage_type && (
                       <small className="text-muted d-block">
-                        <strong>Type:</strong> {entry.usage_type}
+                        <strong>Type:</strong> {sanitizeText(entry.usage_type)}
                       </small>
                     )}
                     {entry.historyType === 'usage' && entry.location && (
                       <small className="text-muted d-block">
-                        <strong>Location:</strong> {entry.location}
+                        <strong>Location:</strong> {sanitizeText(entry.location)}
                       </small>
                     )}
                     {entry.historyType !== 'usage' && entry.service_usage !== null && entry.service_usage !== undefined && (

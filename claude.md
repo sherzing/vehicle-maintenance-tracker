@@ -101,6 +101,7 @@ const WARNING_THRESHOLD = 0.10  // 10%
 4. Team members have equal permissions (owner role reserved for future use)
 
 ## Development Notes
+- Create tests for all code that is created 
 - Use TDD to create new features
 - Always create a failing test first, then create the smallest amount of code to make the test pass
 - Create tests for corner cases as well

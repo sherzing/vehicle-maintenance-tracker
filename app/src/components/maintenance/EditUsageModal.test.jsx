@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '../../test/utils';
 import EditUsageModal from './EditUsageModal';
 import * as usageHistoryService from '../../services/firebase/usageHistory';
+import { rateLimiter } from '../../utils/rateLimiter';
 
 vi.mock('../../services/firebase/usageHistory');
 
@@ -18,6 +19,7 @@ describe('EditUsageModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    rateLimiter.clearAll(); // Clear rate limiter state between tests
   });
 
   it('should not render when show is false', () => {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal, Button, Form, Alert } from 'react-bootstrap';
 import { logUsageUpdate } from '../../services/firebase/usageHistory';
+import { rateLimiter } from '../../utils/rateLimiter';
 
 export default function LogUsageModal({ show, onHide, onUsageLogged, vehicle, user }) {
   // Get today's date in YYYY-MM-DD format
@@ -24,6 +25,14 @@ export default function LogUsageModal({ show, onHide, onUsageLogged, vehicle, us
     setSuccess(false);
     setShowWarning(false);
 
+    // Check rate limit (1 second between submissions, max 10 per minute)
+    const rateLimitKey = `logUsage-${vehicle?.id || 'unknown'}`;
+    const rateLimitCheck = rateLimiter.checkLimit(rateLimitKey, 1000, 10);
+    if (!rateLimitCheck.allowed) {
+      setError(rateLimitCheck.reason);
+      return;
+    }
+
     const usageValue = parseFloat(usage);
 
     // Validate usage is a valid number
@@ -33,12 +42,9 @@ export default function LogUsageModal({ show, onHide, onUsageLogged, vehicle, us
     }
 
     // Validate date is not in future
-    const selectedDate = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time for comparison
-    selectedDate.setHours(0, 0, 0, 0);
-
-    if (selectedDate > today) {
+    // Compare date strings directly to avoid timezone issues
+    const todayString = getTodayString();
+    if (date > todayString) {
       setError('Date cannot be in the future');
       return;
     }
@@ -61,6 +67,9 @@ export default function LogUsageModal({ show, onHide, onUsageLogged, vehicle, us
         location.trim() || null,
         user.uid
       );
+
+      // Record successful operation for rate limiting
+      rateLimiter.recordOperation(rateLimitKey);
 
       setSuccess(true);
       setTimeout(() => {

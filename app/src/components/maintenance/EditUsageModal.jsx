@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal, Button, Form, Alert } from 'react-bootstrap';
 import { updateUsageHistory, deleteUsageHistory } from '../../services/firebase/usageHistory';
+import { rateLimiter } from '../../utils/rateLimiter';
 
 export default function EditUsageModal({ show, onHide, onUsageUpdated, usageEntry, usageUnit = 'km' }) {
   const [formData, setFormData] = useState({
@@ -36,6 +37,14 @@ export default function EditUsageModal({ show, onHide, onUsageUpdated, usageEntr
     setError(null);
     setSuccess(false);
 
+    // Check rate limit (1 second between submissions, max 10 per minute)
+    const rateLimitKey = `updateUsage-${usageEntry?.id || 'unknown'}`;
+    const rateLimitCheck = rateLimiter.checkLimit(rateLimitKey, 1000, 10);
+    if (!rateLimitCheck.allowed) {
+      setError(rateLimitCheck.reason);
+      return;
+    }
+
     // Validate usage
     const usageValue = parseFloat(formData.usage);
     if (!formData.usage || isNaN(usageValue)) {
@@ -50,12 +59,9 @@ export default function EditUsageModal({ show, onHide, onUsageUpdated, usageEntr
     }
 
     // Validate date is not in future
-    const selectedDate = new Date(formData.date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    selectedDate.setHours(0, 0, 0, 0);
-
-    if (selectedDate > today) {
+    // Compare date strings directly to avoid timezone issues
+    const todayString = new Date().toISOString().split('T')[0];
+    if (formData.date > todayString) {
       setError('Date cannot be in the future');
       return;
     }
@@ -67,6 +73,10 @@ export default function EditUsageModal({ show, onHide, onUsageUpdated, usageEntr
       const location = formData.location ? formData.location.trim() : null;
 
       await updateUsageHistory(usageEntry.id, usageValue, date, usageType, location);
+
+      // Record successful operation for rate limiting
+      rateLimiter.recordOperation(rateLimitKey);
+
       setSuccess(true);
 
       setTimeout(() => {
@@ -87,10 +97,22 @@ export default function EditUsageModal({ show, onHide, onUsageUpdated, usageEntr
       return;
     }
 
+    // Check rate limit (1 second between operations, max 5 deletes per minute)
+    const rateLimitKey = `deleteUsage-${usageEntry?.id || 'unknown'}`;
+    const rateLimitCheck = rateLimiter.checkLimit(rateLimitKey, 1000, 5);
+    if (!rateLimitCheck.allowed) {
+      setError(rateLimitCheck.reason);
+      return;
+    }
+
     setDeleting(true);
     setError(null);
     try {
       await deleteUsageHistory(usageEntry.id);
+
+      // Record successful operation for rate limiting
+      rateLimiter.recordOperation(rateLimitKey);
+
       setTimeout(() => {
         setDeleting(false);
         onUsageUpdated();
