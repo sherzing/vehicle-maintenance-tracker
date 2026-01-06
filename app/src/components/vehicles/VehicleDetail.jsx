@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Spinner, Alert } from 'react-bootstrap';
+import { useAuth } from '../../contexts/AuthContext';
 import { getVehicle } from '../../services/firebase/vehicles';
 import { getVehicleMaintenanceItems, getVehicleServiceHistory } from '../../services/firebase/maintenanceItems';
 import { getMaintenanceStatus, getStatusText, formatRemaining } from '../../utils/maintenanceStatus';
@@ -8,11 +9,12 @@ import CreateMaintenanceItemModal from '../maintenance/CreateMaintenanceItemModa
 import EditMaintenanceItemModal from '../maintenance/EditMaintenanceItemModal';
 import LogServiceModal from '../maintenance/LogServiceModal';
 import LogRepairModal from '../maintenance/LogRepairModal';
-import UpdateUsageModal from './UpdateUsageModal';
+import LogUsageModal from './LogUsageModal';
 import EditVehicleModal from './EditVehicleModal';
 import EditServiceModal from '../maintenance/EditServiceModal';
 
 export default function VehicleDetail({ vehicleId }) {
+  const { user } = useAuth();
   const [vehicle, setVehicle] = useState(null);
   const [maintenanceItems, setMaintenanceItems] = useState([]);
   const [serviceHistory, setServiceHistory] = useState([]);
@@ -22,7 +24,7 @@ export default function VehicleDetail({ vehicleId }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showLogServiceModal, setShowLogServiceModal] = useState(false);
   const [showLogRepairModal, setShowLogRepairModal] = useState(false);
-  const [showUpdateUsageModal, setShowUpdateUsageModal] = useState(false);
+  const [showLogUsageModal, setShowLogUsageModal] = useState(false);
   const [showEditVehicleModal, setShowEditVehicleModal] = useState(false);
   const [showEditServiceModal, setShowEditServiceModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -76,7 +78,7 @@ export default function VehicleDetail({ vehicleId }) {
     await loadVehicleData();
   };
 
-  const handleUsageUpdated = async () => {
+  const handleUsageLogged = async () => {
     await loadVehicleData();
   };
 
@@ -146,9 +148,9 @@ export default function VehicleDetail({ vehicleId }) {
             </button>
             <button
               className="minimalist-btn-secondary"
-              onClick={() => setShowUpdateUsageModal(true)}
+              onClick={() => setShowLogUsageModal(true)}
             >
-              Update Usage
+              Log Usage
             </button>
           </div>
         </div>
@@ -383,11 +385,12 @@ export default function VehicleDetail({ vehicleId }) {
         usageUnit={vehicle.usage_unit}
       />
 
-      <UpdateUsageModal
-        show={showUpdateUsageModal}
-        onHide={() => setShowUpdateUsageModal(false)}
-        onUsageUpdated={handleUsageUpdated}
+      <LogUsageModal
+        show={showLogUsageModal}
+        onHide={() => setShowLogUsageModal(false)}
+        onUsageLogged={handleUsageLogged}
         vehicle={vehicle}
+        user={user}
       />
 
       <EditVehicleModal

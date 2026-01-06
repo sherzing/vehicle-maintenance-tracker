@@ -7,6 +7,7 @@ import { getTeamVehicles } from '../../services/firebase/vehicles';
 import { getVehicleMaintenanceItems } from '../../services/firebase/maintenanceItems';
 import { getMaintenanceStatus, getStatusText } from '../../utils/maintenanceStatus';
 import { calculateNextServiceDue } from '../../utils/vehicleStats';
+import CreateTeamModal from '../teams/CreateTeamModal';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -17,6 +18,7 @@ export default function Dashboard() {
   const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [vehicleStatusList, setVehicleStatusList] = useState([]);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
 
   useEffect(() => {
     if (user?.uid) {
@@ -54,6 +56,16 @@ export default function Dashboard() {
 
   const handleTeamChange = (e) => {
     const teamId = e.target.value;
+    if (teamId === 'create-new-team') {
+      setShowCreateTeamModal(true);
+      return;
+    }
+    setSelectedTeamId(teamId);
+    localStorage.setItem('selectedTeamId', teamId);
+  };
+
+  const handleTeamCreated = async (teamId) => {
+    await loadTeams();
     setSelectedTeamId(teamId);
     localStorage.setItem('selectedTeamId', teamId);
   };
@@ -156,35 +168,56 @@ export default function Dashboard() {
 
   return (
     <div className="minimalist-container">
-      {/* Page Header */}
-      <div className="minimalist-page-header">
-        <h1 className="minimalist-page-title">Dashboard</h1>
-        <p className="minimalist-page-subtitle">Welcome, {user?.displayName || user?.email}!</p>
+      {/* Page Header with Team Selector */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+        <div className="minimalist-page-header" style={{ marginBottom: '0' }}>
+          <h1 className="minimalist-page-title">Dashboard</h1>
+          <p className="minimalist-page-subtitle">Welcome, {user?.displayName || user?.email}!</p>
+        </div>
+
+        {/* Team Selector */}
+        {teams.length > 0 && (
+          <div style={{ minWidth: '200px' }}>
+            <select
+              id="team-select"
+              className="minimalist-team-select"
+              value={selectedTeamId || ''}
+              onChange={handleTeamChange}
+              style={{
+                width: '100%',
+                padding: '0.5rem 0.75rem',
+                border: '1px solid var(--gray-300)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '0.875rem',
+                color: 'var(--gray-900)',
+                backgroundColor: 'white',
+                cursor: 'pointer',
+              }}
+            >
+              {teams.map(team => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
+                </option>
+              ))}
+              <option value="create-new-team" style={{ fontStyle: 'italic' }}>
+                + Create New Team
+              </option>
+            </select>
+          </div>
+        )}
       </div>
+
+      <CreateTeamModal
+        show={showCreateTeamModal}
+        onHide={() => setShowCreateTeamModal(false)}
+        onTeamCreated={handleTeamCreated}
+        userId={user.uid}
+      />
 
       {error && (
         <Alert variant="danger" dismissible onClose={() => setError(null)}>
           {error}
         </Alert>
-      )}
-
-      {/* Team Selector */}
-      {teams.length > 0 && (
-        <div className="minimalist-team-selector">
-          <label htmlFor="team-select">Select Team</label>
-          <select
-            id="team-select"
-            className="minimalist-team-select"
-            value={selectedTeamId || ''}
-            onChange={handleTeamChange}
-          >
-            {teams.map(team => (
-              <option key={team.id} value={team.id}>
-                {team.name}
-              </option>
-            ))}
-          </select>
-        </div>
       )}
 
       {teams.length === 0 && !loading && (

@@ -7,6 +7,7 @@ import { getTeamVehicles } from '../../services/firebase/vehicles';
 import VehicleList from './VehicleList';
 import VehicleDetail from './VehicleDetail';
 import CreateVehicleModal from './CreateVehicleModal';
+import CreateTeamModal from '../teams/CreateTeamModal';
 
 export default function VehiclesPage() {
   const { user } = useAuth();
@@ -18,6 +19,7 @@ export default function VehiclesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
 
   useEffect(() => {
     loadTeams();
@@ -121,6 +123,12 @@ export default function VehiclesPage() {
     await loadVehicles();
   };
 
+  const handleTeamCreated = async (teamId) => {
+    await loadTeams();
+    setSelectedTeamId(teamId);
+    localStorage.setItem('selectedTeamId', teamId);
+  };
+
   const selectedTeam = teams.find(t => t.id === selectedTeamId);
 
   if (loading && teams.length === 0) {
@@ -155,7 +163,7 @@ export default function VehiclesPage() {
                 Manage vehicles and track their maintenance.
               </p>
             </div>
-            {teams.length > 1 && (
+            {teams.length > 0 && (
               <Dropdown>
                 <Dropdown.Toggle variant="outline-primary">
                   Team: {selectedTeam?.name || 'Select Team'}
@@ -173,6 +181,13 @@ export default function VehiclesPage() {
                       {team.name}
                     </Dropdown.Item>
                   ))}
+                  <Dropdown.Divider />
+                  <Dropdown.Item
+                    onClick={() => setShowCreateTeamModal(true)}
+                    style={{ fontStyle: 'italic' }}
+                  >
+                    + Create New Team
+                  </Dropdown.Item>
                 </Dropdown.Menu>
               </Dropdown>
             )}
@@ -208,6 +223,13 @@ export default function VehiclesPage() {
           teamId={selectedTeamId}
         />
       )}
+
+      <CreateTeamModal
+        show={showCreateTeamModal}
+        onHide={() => setShowCreateTeamModal(false)}
+        onTeamCreated={handleTeamCreated}
+        userId={user.uid}
+      />
     </Container>
   );
 }
