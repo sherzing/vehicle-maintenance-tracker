@@ -205,6 +205,7 @@ export async function logUsageUpdate(vehicleId, usage, date, usageType = null, l
     created_by: userId,
     created_at: serverTimestamp(),
     updated_at: null,
+    updated_by: null,
     version: 1,
   };
 

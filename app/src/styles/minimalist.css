@@ -222,11 +222,47 @@
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .minimalist-header-content {
-    flex-direction: column;
-    height: auto;
-    padding: var(--spacing-md) 0;
-    gap: var(--spacing-md);
+    height: 50px;
+  }
+
+  .minimalist-logo {
+    font-size: 1.125rem;
+  }
+
+  .minimalist-breadcrumb {
+    font-size: 0.75rem;
+  }
+
+  .minimalist-user-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .minimalist-header {
+    padding: 0 var(--spacing-sm);
+  }
+
+  .minimalist-header-content {
+    height: 48px;
+  }
+
+  .minimalist-logo {
+    font-size: 1rem;
+  }
+
+  .minimalist-breadcrumb {
+    font-size: 0.688rem;
+    gap: 0.25rem;
+  }
+
+  .minimalist-user-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 0.688rem;
   }
 }

@@ -141,7 +141,7 @@
 /* Vehicle Stats */
 .minimalist-vehicle-stats {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: var(--spacing-md);
   margin-bottom: 1.25rem;
   padding-bottom: 1.25rem;
@@ -237,6 +237,7 @@
 
   .minimalist-vehicles-grid {
     grid-template-columns: 1fr;
+    gap: var(--spacing-md);
   }
 
   .minimalist-filters {
@@ -247,11 +248,75 @@
     font-size: 0.813rem;
     padding: 0.5rem var(--spacing-md);
   }
+
+  .minimalist-vehicle-card {
+    padding: 1.25rem;
+  }
+
+  .minimalist-vehicle-header {
+    margin-bottom: 1rem;
+  }
+
+  .minimalist-vehicle-name {
+    font-size: 1.125rem;
+  }
+
+  .minimalist-vehicle-stats {
+    gap: var(--spacing-sm);
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .minimalist-stat-value {
+    font-size: 1rem;
+  }
 }
 
 @media (max-width: 480px) {
+  .minimalist-vehicle-card {
+    padding: 1rem;
+  }
+
+  .minimalist-vehicle-header {
+    margin-bottom: 0.75rem;
+  }
+
+  .minimalist-vehicle-name {
+    font-size: 1rem;
+  }
+
+  .minimalist-vehicle-model {
+    font-size: 0.813rem;
+  }
+
   .minimalist-vehicle-stats {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-sm);
+    gap: 0.625rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .minimalist-stat-label {
+    font-size: 0.688rem;
+  }
+
+  .minimalist-stat-value {
+    font-size: 0.938rem;
+  }
+
+  .minimalist-next-service {
+    padding: 0.75rem;
+  }
+
+  .minimalist-next-service-title {
+    font-size: 0.688rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .minimalist-next-service-item {
+    font-size: 0.813rem;
+  }
+
+  .minimalist-next-service-due {
+    font-size: 0.75rem;
   }
 }

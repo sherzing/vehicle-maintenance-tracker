@@ -67,6 +67,8 @@ describe('usageHistory service', () => {
         location: 'Laguna Seca',
         created_by: 'user123',
         version: 1,
+        updated_at: null,
+        updated_by: null,
       });
 
       // Check that vehicle.current_usage was updated
@@ -75,7 +77,7 @@ describe('usageHistory service', () => {
       });
     });
 
-    it('should handle null optional fields', async () => {
+    it('should handle null optional fields and update vehicle current_usage', async () => {
       const mockUsageRef = { id: 'usage123' };
       firestore.addDoc.mockResolvedValue(mockUsageRef);
 
@@ -92,6 +94,7 @@ describe('usageHistory service', () => {
       const date = new Date('2024-01-15');
       await logUsageUpdate('vehicle123', 50000, date, null, null, 'user123');
 
+      // Verify all required fields are included (including updated_by and version)
       const addDocCall = firestore.addDoc.mock.calls[0];
       expect(addDocCall[1]).toMatchObject({
         vehicle_id: 'vehicle123',
@@ -100,6 +103,14 @@ describe('usageHistory service', () => {
         usage_type: null,
         location: null,
         created_by: 'user123',
+        updated_at: null,
+        updated_by: null,
+        version: 1,
+      });
+
+      // Verify vehicle.current_usage is updated even with null optionals
+      expect(vehicles.updateVehicle).toHaveBeenCalledWith('vehicle123', {
+        current_usage: 50000,
       });
     });
 

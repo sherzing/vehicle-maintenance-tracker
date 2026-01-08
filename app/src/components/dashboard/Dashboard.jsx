@@ -297,27 +297,34 @@ export default function Dashboard() {
                     </div>
 
                     {/* Vehicle Stats */}
-                    <div className="minimalist-vehicle-stats">
+                    <div className="minimalist-vehicle-stats" style={{ gridTemplateColumns: '1fr' }}>
                       <div className="minimalist-stat">
                         <div className="minimalist-stat-label">Current Usage</div>
                         <div className="minimalist-stat-value">
                           {currentUsage.toLocaleString()} <span style={{ fontSize: '0.75rem', fontWeight: '400' }}>{usageLabel}</span>
+                          {itemCount === 0 && (
+                            <span style={{ fontSize: '0.75rem', fontWeight: '400', color: 'var(--gray-500)', marginLeft: '0.5rem' }}>
+                              • No maintenance items defined
+                            </span>
+                          )}
                         </div>
-                      </div>
-                      <div className="minimalist-stat">
-                        <div className="minimalist-stat-label">Maintenance Items</div>
-                        <div className="minimalist-stat-value">{itemCount}</div>
                       </div>
                     </div>
 
                     {/* Next Service */}
-                    {nextServiceInfo && (
-                      <div className={`minimalist-next-service status-${status}`}>
-                        <div className="minimalist-next-service-title">Next Service</div>
-                        <div className="minimalist-next-service-item">{nextServiceInfo.name}</div>
-                        <div className="minimalist-next-service-due">{nextServiceInfo.remaining}</div>
-                      </div>
-                    )}
+                    <div className={`minimalist-next-service status-${status}`}>
+                      <div className="minimalist-next-service-title">Next Service</div>
+                      {nextServiceInfo ? (
+                        <>
+                          <div className="minimalist-next-service-item">{nextServiceInfo.name}</div>
+                          <div className="minimalist-next-service-due">{nextServiceInfo.remaining}</div>
+                        </>
+                      ) : (
+                        <div className="minimalist-next-service-due" style={{ color: 'var(--gray-500)' }}>
+                          No maintenance items defined
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}

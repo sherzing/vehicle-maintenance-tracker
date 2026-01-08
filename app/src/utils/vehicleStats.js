@@ -96,7 +96,7 @@ export function calculateNextServiceDue(maintenanceItems, currentUsage, usageUni
 
   // Find item with highest percentage (closest to due)
   let nextItem = null;
-  let highestPercentage = 0;
+  let highestPercentage = -1; // Start at -1 to ensure we pick at least one item
 
   maintenanceItems.forEach(item => {
     // Calculate usage-based due date
@@ -114,7 +114,7 @@ export function calculateNextServiceDue(maintenanceItems, currentUsage, usageUni
           name: item.name,
           dueUsage: dueUsage,
           remaining: remaining > 0
-            ? `${Math.round(remaining).toLocaleString()} ${usageUnit}`
+            ? `in ${Math.round(remaining).toLocaleString()} ${usageUnit}`
             : 'Due now'
         };
       }
