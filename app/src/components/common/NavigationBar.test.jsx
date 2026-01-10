@@ -109,16 +109,16 @@ describe('NavigationBar', () => {
     });
   });
 
-  it('should show "Manage Teams" button in user dropdown', async () => {
+  it('should show "Manage Teams" link in user dropdown', async () => {
     renderNav();
 
     const avatar = screen.getByText('TU');
     fireEvent.click(avatar);
 
     await waitFor(() => {
-      const manageTeamsButton = screen.getByText('Manage Teams');
-      expect(manageTeamsButton).toBeInTheDocument();
-      expect(manageTeamsButton.tagName).toBe('BUTTON');
+      const manageTeamsLink = screen.getByText('Manage Teams');
+      expect(manageTeamsLink).toBeInTheDocument();
+      expect(manageTeamsLink.tagName).toBe('A');
     });
   });
 
@@ -132,8 +132,8 @@ describe('NavigationBar', () => {
       expect(screen.getByText('Manage Teams')).toBeInTheDocument();
     });
 
-    const manageTeamsButton = screen.getByText('Manage Teams');
-    fireEvent.click(manageTeamsButton);
+    const manageTeamsLink = screen.getByText('Manage Teams');
+    fireEvent.click(manageTeamsLink);
 
     await waitFor(() => {
       expect(screen.queryByText('Sign Out')).not.toBeInTheDocument();

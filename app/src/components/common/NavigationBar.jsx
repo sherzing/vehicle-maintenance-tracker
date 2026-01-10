@@ -78,9 +78,14 @@ export default function NavigationBar() {
                   borderRadius: 'var(--radius-md)',
                   boxShadow: 'var(--shadow-md)',
                   minWidth: '200px',
-                  zIndex: 1000,
+                  zIndex: 1001,
                 }}
                 onClick={(e) => e.stopPropagation()}
+                onMouseLeave={(e) => {
+                  // Only reset hover states when leaving the entire menu
+                  const buttons = e.currentTarget.querySelectorAll('button');
+                  buttons.forEach(btn => btn.style.background = 'none');
+                }}
               >
                 {user.displayName && (
                   <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--gray-100)' }}>
@@ -99,11 +104,13 @@ export default function NavigationBar() {
                     </div>
                   </div>
                 )}
-                <button
+                <Link
+                  to="/teams"
                   onClick={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
-                    navigate('/teams');
                     setShowUserMenu(false);
+                    setTimeout(() => navigate('/teams'), 0);
                   }}
                   style={{
                     display: 'block',
@@ -115,15 +122,16 @@ export default function NavigationBar() {
                     cursor: 'pointer',
                     fontSize: '0.875rem',
                     color: 'var(--gray-700)',
-                    transition: 'background 0.2s',
+                    textDecoration: 'none',
                   }}
-                  onMouseEnter={(e) => e.target.style.background = 'var(--gray-50)'}
-                  onMouseLeave={(e) => e.target.style.background = 'none'}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--gray-50)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
                 >
                   Manage Teams
-                </button>
+                </Link>
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setShowUserMenu(false);
                     handleSignOut();
                   }}
@@ -136,10 +144,9 @@ export default function NavigationBar() {
                     cursor: 'pointer',
                     fontSize: '0.875rem',
                     color: 'var(--gray-700)',
-                    transition: 'background 0.2s',
                   }}
-                  onMouseEnter={(e) => e.target.style.background = 'var(--gray-50)'}
-                  onMouseLeave={(e) => e.target.style.background = 'none'}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--gray-50)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
                 >
                   Sign Out
                 </button>
