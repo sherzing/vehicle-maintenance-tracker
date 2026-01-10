@@ -102,6 +102,28 @@ export default function NavigationBar() {
                 <button
                   onClick={() => {
                     setShowUserMenu(false);
+                    navigate('/teams');
+                  }}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    border: 'none',
+                    background: 'none',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    color: 'var(--gray-700)',
+                    transition: 'background 0.2s',
+                  }}
+                  onMouseEnter={(e) => e.target.style.background = 'var(--gray-50)'}
+                  onMouseLeave={(e) => e.target.style.background = 'none'}
+                >
+                  Manage Teams
+                </button>
+                <button
+                  onClick={() => {
+                    setShowUserMenu(false);
                     handleSignOut();
                   }}
                   style={{

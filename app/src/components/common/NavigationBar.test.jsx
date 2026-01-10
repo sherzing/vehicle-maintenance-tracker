@@ -109,21 +109,20 @@ describe('NavigationBar', () => {
     });
   });
 
-  it('should show "Manage Teams" link in user dropdown', async () => {
+  it('should show "Manage Teams" button in user dropdown', async () => {
     renderNav();
 
     const avatar = screen.getByText('TU');
     fireEvent.click(avatar);
 
     await waitFor(() => {
-      const manageTeamsLink = screen.getByText('Manage Teams');
-      expect(manageTeamsLink).toBeInTheDocument();
-      expect(manageTeamsLink.tagName).toBe('A');
-      expect(manageTeamsLink.getAttribute('href')).toBe('/teams');
+      const manageTeamsButton = screen.getByText('Manage Teams');
+      expect(manageTeamsButton).toBeInTheDocument();
+      expect(manageTeamsButton.tagName).toBe('BUTTON');
     });
   });
 
-  it('should close menu when "Manage Teams" is clicked', async () => {
+  it('should navigate to teams page and close menu when "Manage Teams" is clicked', async () => {
     renderNav();
 
     const avatar = screen.getByText('TU');
@@ -133,11 +132,12 @@ describe('NavigationBar', () => {
       expect(screen.getByText('Manage Teams')).toBeInTheDocument();
     });
 
-    const manageTeamsLink = screen.getByText('Manage Teams');
-    fireEvent.click(manageTeamsLink);
+    const manageTeamsButton = screen.getByText('Manage Teams');
+    fireEvent.click(manageTeamsButton);
 
     await waitFor(() => {
       expect(screen.queryByText('Sign Out')).not.toBeInTheDocument();
+      expect(mockNavigate).toHaveBeenCalledWith('/teams');
     });
   });
 
