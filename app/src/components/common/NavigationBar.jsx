@@ -101,8 +101,8 @@ export default function NavigationBar() {
                 )}
                 <button
                   onClick={() => {
-                    setShowUserMenu(false);
                     navigate('/teams');
+                    setShowUserMenu(false);
                   }}
                   style={{
                     display: 'block',
