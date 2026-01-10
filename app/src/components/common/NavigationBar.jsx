@@ -100,7 +100,8 @@ export default function NavigationBar() {
                   </div>
                 )}
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     navigate('/teams');
                     setShowUserMenu(false);
                   }}
