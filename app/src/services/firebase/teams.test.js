@@ -17,6 +17,7 @@ vi.mock('firebase/firestore', () => ({
   getDocs: vi.fn(),
   addDoc: vi.fn(),
   updateDoc: vi.fn(),
+  setDoc: vi.fn(),
   query: vi.fn(),
   where: vi.fn(),
   serverTimestamp: vi.fn(() => 'TIMESTAMP'),
@@ -120,6 +121,47 @@ describe('teams service', () => {
       const updateDocCall = firestore.updateDoc.mock.calls[0];
       expect(updateDocCall[1]).toMatchObject({
         name: 'New Team Name',
+      });
+    });
+  });
+
+  describe('addUserToTeam', () => {
+    it('should add user to existing team and update existing user doc', async () => {
+      firestore.getDoc.mockResolvedValue({
+        exists: () => true,
+        data: () => ({ team_ids: ['otherTeam'] }),
+      });
+
+      await addUserToTeam('user456', 'team123');
+
+      // Should update team to add user to member_ids
+      const firstCall = firestore.updateDoc.mock.calls[0];
+      expect(firstCall[1]).toMatchObject({
+        member_ids: { _type: 'arrayUnion', value: 'user456' },
+        updated_at: 'TIMESTAMP',
+      });
+
+      // Should update user to add team_id
+      const secondCall = firestore.updateDoc.mock.calls[1];
+      expect(secondCall[1]).toMatchObject({
+        team_ids: { _type: 'arrayUnion', value: 'team123' },
+      });
+    });
+
+    it('should create user document if user does not exist', async () => {
+      firestore.getDoc.mockResolvedValue({
+        exists: () => false,
+      });
+
+      await addUserToTeam('newUser', 'team123');
+
+      // Should create user document with team_id
+      const setDocCall = firestore.setDoc.mock.calls[0];
+      expect(setDocCall[1]).toMatchObject({
+        team_ids: ['team123'],
+        email: '',
+        display_name: '',
+        created_at: 'TIMESTAMP',
       });
     });
   });

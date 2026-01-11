@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getUserTeams } from '../../services/firebase/teams';
 import TeamList from './TeamList';
 import CreateTeamModal from './CreateTeamModal';
+import EditTeamModal from './EditTeamModal';
 
 export default function TeamsPage() {
   const { user } = useAuth();
@@ -12,6 +13,8 @@ export default function TeamsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [teamToEdit, setTeamToEdit] = useState(null);
 
   useEffect(() => {
     loadTeams();
@@ -41,6 +44,16 @@ export default function TeamsPage() {
   const handleTeamCreated = async (teamId) => {
     await loadTeams();
     setSelectedTeamId(teamId);
+  };
+
+  const handleEditTeam = (team) => {
+    setTeamToEdit(team);
+    setShowEditModal(true);
+  };
+
+  const handleTeamUpdated = async () => {
+    await loadTeams();
+    setShowEditModal(false);
   };
 
   if (loading) {
@@ -77,6 +90,7 @@ export default function TeamsPage() {
             currentTeamId={selectedTeamId}
             onTeamSelect={setSelectedTeamId}
             onCreateTeam={() => setShowCreateModal(true)}
+            onEditTeam={handleEditTeam}
             userId={user.uid}
           />
         </Col>
@@ -87,6 +101,14 @@ export default function TeamsPage() {
         onHide={() => setShowCreateModal(false)}
         onTeamCreated={handleTeamCreated}
         userId={user.uid}
+      />
+
+      <EditTeamModal
+        show={showEditModal}
+        onHide={() => setShowEditModal(false)}
+        onTeamUpdated={handleTeamUpdated}
+        team={teamToEdit}
+        currentUserId={user.uid}
       />
     </Container>
   );

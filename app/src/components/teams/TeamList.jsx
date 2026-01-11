@@ -1,6 +1,6 @@
 import { Card, ListGroup, Badge, Button } from 'react-bootstrap';
 
-export default function TeamList({ teams, currentTeamId, onTeamSelect, onCreateTeam, userId }) {
+export default function TeamList({ teams, currentTeamId, onTeamSelect, onCreateTeam, onEditTeam, userId }) {
   if (!teams || teams.length === 0) {
     return (
       <Card>
@@ -42,11 +42,25 @@ export default function TeamList({ teams, currentTeamId, onTeamSelect, onCreateT
                   {memberCount} {memberCount === 1 ? 'member' : 'members'}
                 </small>
               </div>
-              {isOwner && (
-                <Badge bg="secondary" pill>
-                  Owner
-                </Badge>
-              )}
+              <div className="d-flex gap-2 align-items-center">
+                {isOwner && (
+                  <>
+                    <Badge bg="secondary" pill>
+                      Owner
+                    </Badge>
+                    <Button
+                      variant="outline-primary"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditTeam(team);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                  </>
+                )}
+              </div>
             </ListGroup.Item>
           );
         })}
