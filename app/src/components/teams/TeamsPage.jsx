@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Container, Row, Col, Alert, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Alert, Spinner, Button } from 'react-bootstrap';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserTeams } from '../../services/firebase/teams';
 import TeamList from './TeamList';
 import CreateTeamModal from './CreateTeamModal';
 import EditTeamModal from './EditTeamModal';
+import ExportImportModal from './ExportImportModal';
 
 export default function TeamsPage() {
   const { user } = useAuth();
@@ -15,6 +16,7 @@ export default function TeamsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [teamToEdit, setTeamToEdit] = useState(null);
+  const [showExportImportModal, setShowExportImportModal] = useState(false);
 
   useEffect(() => {
     loadTeams();
@@ -66,6 +68,8 @@ export default function TeamsPage() {
     );
   }
 
+  const selectedTeam = teams.find(t => t.id === selectedTeamId);
+
   return (
     <Container className="mt-4">
       <Row className="mb-4">
@@ -74,6 +78,16 @@ export default function TeamsPage() {
           <p className="text-muted">
             Manage your teams and collaborate with others on vehicle maintenance.
           </p>
+        </Col>
+        <Col xs="auto">
+          {selectedTeam && (
+            <Button
+              variant="outline-secondary"
+              onClick={() => setShowExportImportModal(true)}
+            >
+              📥 Export / Import
+            </Button>
+          )}
         </Col>
       </Row>
 
@@ -109,6 +123,13 @@ export default function TeamsPage() {
         onTeamUpdated={handleTeamUpdated}
         team={teamToEdit}
         currentUserId={user.uid}
+      />
+
+      <ExportImportModal
+        show={showExportImportModal}
+        onHide={() => setShowExportImportModal(false)}
+        team={selectedTeam}
+        onImportComplete={loadTeams}
       />
     </Container>
   );
