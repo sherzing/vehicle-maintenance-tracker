@@ -1,4 +1,33 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "service_history",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "vehicle_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "service_date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "usage_history",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "vehicle_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }
