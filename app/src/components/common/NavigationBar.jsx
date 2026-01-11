@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -7,6 +7,23 @@ export default function NavigationBar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showUserMenu]);
 
   const handleSignOut = async () => {
     try {
@@ -58,7 +75,7 @@ export default function NavigationBar() {
           )}
         </nav>
 
-        <div className="minimalist-user-menu">
+        <div className="minimalist-user-menu" ref={menuRef}>
           <div
             className="minimalist-user-avatar"
             onClick={() => setShowUserMenu(!showUserMenu)}
@@ -69,6 +86,7 @@ export default function NavigationBar() {
             {/* Dropdown Menu */}
             {showUserMenu && (
               <div
+                className="user-dropdown-menu"
                 style={{
                   position: 'absolute',
                   top: '50px',
@@ -78,13 +96,7 @@ export default function NavigationBar() {
                   borderRadius: 'var(--radius-md)',
                   boxShadow: 'var(--shadow-md)',
                   minWidth: '200px',
-                  zIndex: 1001,
-                }}
-                onClick={(e) => e.stopPropagation()}
-                onMouseLeave={(e) => {
-                  // Only reset hover states when leaving the entire menu
-                  const buttons = e.currentTarget.querySelectorAll('button');
-                  buttons.forEach(btn => btn.style.background = 'none');
+                  zIndex: 1000,
                 }}
               >
                 {user.displayName && (
@@ -106,32 +118,22 @@ export default function NavigationBar() {
                 )}
                 <Link
                   to="/teams"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setShowUserMenu(false);
-                    setTimeout(() => navigate('/teams'), 0);
-                  }}
+                  className="user-menu-item"
+                  onClick={() => setShowUserMenu(false)}
                   style={{
                     display: 'block',
                     width: '100%',
                     padding: '0.75rem 1rem',
-                    border: 'none',
-                    background: 'none',
-                    textAlign: 'left',
-                    cursor: 'pointer',
                     fontSize: '0.875rem',
                     color: 'var(--gray-700)',
                     textDecoration: 'none',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--gray-50)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
                 >
                   Manage Teams
                 </Link>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  className="user-menu-item"
+                  onClick={() => {
                     setShowUserMenu(false);
                     handleSignOut();
                   }}
@@ -145,8 +147,6 @@ export default function NavigationBar() {
                     fontSize: '0.875rem',
                     color: 'var(--gray-700)',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--gray-50)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
                 >
                   Sign Out
                 </button>
@@ -155,21 +155,6 @@ export default function NavigationBar() {
           </div>
         </div>
       </div>
-
-      {/* Click outside to close dropdown */}
-      {showUserMenu && (
-        <div
-          onClick={() => setShowUserMenu(false)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 999,
-          }}
-        />
-      )}
     </header>
   );
 }

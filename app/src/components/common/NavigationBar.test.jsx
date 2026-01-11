@@ -100,9 +100,8 @@ describe('NavigationBar', () => {
       expect(screen.getByText('Manage Teams')).toBeInTheDocument();
     });
 
-    // Click outside the menu (on the backdrop)
-    const backdrop = document.querySelector('[style*="position: fixed"]');
-    fireEvent.click(backdrop);
+    // Click outside the menu
+    fireEvent.mouseDown(document.body);
 
     await waitFor(() => {
       expect(screen.queryByText('Manage Teams')).not.toBeInTheDocument();
@@ -136,8 +135,10 @@ describe('NavigationBar', () => {
     fireEvent.click(manageTeamsLink);
 
     await waitFor(() => {
+      // Menu should close
       expect(screen.queryByText('Sign Out')).not.toBeInTheDocument();
-      expect(mockNavigate).toHaveBeenCalledWith('/teams');
+      // Breadcrumb should show Teams (indicating navigation occurred)
+      expect(screen.getByText('Teams')).toBeInTheDocument();
     });
   });
 
