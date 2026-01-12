@@ -169,8 +169,9 @@ export default function ExportImportModal({ show, onHide, team, onImportComplete
           </p>
 
           <Form.Group className="mb-3">
-            <Form.Label>Import Mode</Form.Label>
+            <Form.Label htmlFor="import-mode-select">Import Mode</Form.Label>
             <Form.Select
+              id="import-mode-select"
               value={importMode}
               onChange={(e) => setImportMode(e.target.value)}
               disabled={loading}
@@ -186,7 +187,7 @@ export default function ExportImportModal({ show, onHide, team, onImportComplete
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label>Select Import File</Form.Label>
+            <Form.Label htmlFor="import-file-input">Select Import File</Form.Label>
             <Form.Control
               id="import-file-input"
               type="file"
