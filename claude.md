@@ -101,13 +101,84 @@ const WARNING_THRESHOLD = 0.10  // 10%
 4. Team members have equal permissions (owner role reserved for future use)
 
 ## Development Notes
-- Create tests for all code that is created 
-- Use TDD to create new features
-- Always create a failing test first, then create the smallest amount of code to make the test pass
-- Create tests for corner cases as well
-- Always test the interface of a method, not the implementation so that the test stays the same when the implementation would change
+
+### Test-Driven Development (TDD)
+**CRITICAL: Comprehensive tests are MANDATORY for every feature. Tests are not optional and must be created as part of implementation, not as an afterthought.**
+
+#### Test Coverage Requirements
+Every new feature MUST include comprehensive tests covering:
+
+1. **Service Layer Tests** (for all business logic)
+   - Happy path with valid inputs
+   - Error cases and edge cases
+   - Null/undefined handling
+   - Validation failures
+   - Async operations (success and failure)
+   - All public methods and functions
+
+2. **Component Tests** (for all React components)
+   - Initial rendering and display
+   - User interactions (clicks, form inputs, file uploads)
+   - State changes and updates
+   - Props variations
+   - Conditional rendering (show/hide based on state)
+   - Error states and loading states
+   - Integration with hooks (useAuth, custom hooks)
+   - Accessibility (form labels, ARIA attributes)
+
+3. **Integration Tests** (for features spanning multiple components)
+   - Data flow between components
+   - localStorage/sessionStorage synchronization
+   - Modal open/close behavior
+   - Navigation and routing
+
+#### Test Quality Standards
+- **Create failing tests first**, then implement to make them pass
+- Test the **interface, not implementation** - tests should survive refactoring
+- **Minimum 15-20 tests** for new components with significant functionality
+- **Cover all branches** - every if/else, switch case, conditional render
+- **Test edge cases**: empty arrays, null values, invalid inputs, boundary conditions
+- **Test error handling**: network failures, validation errors, permission denials
+- **Mock dependencies** properly (Firebase, AuthContext, services)
+- Use **descriptive test names** that explain what is being tested
+
+#### When to Create Tests
+- **ALWAYS create tests for**:
+  - New service functions (business logic)
+  - New React components
+  - New features or functionality
+  - Bug fixes (regression tests)
+  - Modified components (update existing tests)
+
+- **Tests must be created BEFORE marking a feature complete**
+- If a feature is implemented without tests, it is NOT done
+- Do not wait to be asked to create tests
+
+#### Example Test Structure
+```javascript
+describe('ComponentName', () => {
+  describe('Feature Group 1', () => {
+    it('should do X when Y happens', () => { /* ... */ });
+    it('should handle error case Z', () => { /* ... */ });
+    it('should render correctly with props A', () => { /* ... */ });
+  });
+
+  describe('Feature Group 2', () => {
+    it('should validate input correctly', () => { /* ... */ });
+    it('should show error message on failure', () => { /* ... */ });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle null/undefined gracefully', () => { /* ... */ });
+    it('should handle empty arrays', () => { /* ... */ });
+  });
+});
+```
+
+### Code Quality
 - Check types to improve code quality
-- Keep code close to stock typescript
+- Keep code close to stock TypeScript
+- Follow existing patterns in the codebase
 
 ### Security Rules
 - Check all code against OWASP top 10
