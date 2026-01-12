@@ -31,9 +31,14 @@ export default function TeamsPage() {
       const userTeams = await getUserTeams(user.uid);
       setTeams(userTeams);
 
-      // Auto-select first team if none selected
-      if (userTeams.length > 0 && !selectedTeamId) {
-        setSelectedTeamId(userTeams[0].id);
+      // Get selected team from localStorage or use first team
+      const storedTeamId = localStorage.getItem('selectedTeamId');
+      if (storedTeamId && userTeams.some(t => t.id === storedTeamId)) {
+        setSelectedTeamId(storedTeamId);
+      } else if (userTeams.length > 0) {
+        const firstTeamId = userTeams[0].id;
+        setSelectedTeamId(firstTeamId);
+        localStorage.setItem('selectedTeamId', firstTeamId);
       }
     } catch (err) {
       console.error('Failed to load teams:', err);
@@ -46,6 +51,12 @@ export default function TeamsPage() {
   const handleTeamCreated = async (teamId) => {
     await loadTeams();
     setSelectedTeamId(teamId);
+    localStorage.setItem('selectedTeamId', teamId);
+  };
+
+  const handleTeamSelect = (teamId) => {
+    setSelectedTeamId(teamId);
+    localStorage.setItem('selectedTeamId', teamId);
   };
 
   const handleEditTeam = (team) => {
@@ -102,7 +113,7 @@ export default function TeamsPage() {
           <TeamList
             teams={teams}
             currentTeamId={selectedTeamId}
-            onTeamSelect={setSelectedTeamId}
+            onTeamSelect={handleTeamSelect}
             onCreateTeam={() => setShowCreateModal(true)}
             onEditTeam={handleEditTeam}
             userId={user.uid}

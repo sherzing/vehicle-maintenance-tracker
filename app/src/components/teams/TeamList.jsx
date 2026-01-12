@@ -17,7 +17,10 @@ export default function TeamList({ teams, currentTeamId, onTeamSelect, onCreateT
   return (
     <Card>
       <Card.Header className="d-flex justify-content-between align-items-center">
-        <h5 className="mb-0">Your Teams</h5>
+        <div>
+          <h5 className="mb-0">Your Teams</h5>
+          <small className="text-muted">Click a team to set it as active</small>
+        </div>
         <Button variant="primary" size="sm" onClick={onCreateTeam}>
           + New Team
         </Button>
@@ -37,7 +40,14 @@ export default function TeamList({ teams, currentTeamId, onTeamSelect, onCreateT
               className="d-flex justify-content-between align-items-center"
             >
               <div>
-                <div className="fw-semibold">{team.name}</div>
+                <div className="fw-semibold">
+                  {team.name}
+                  {isSelected && (
+                    <Badge bg="success" pill className="ms-2">
+                      Active
+                    </Badge>
+                  )}
+                </div>
                 <small className="text-muted">
                   {memberCount} {memberCount === 1 ? 'member' : 'members'}
                 </small>
