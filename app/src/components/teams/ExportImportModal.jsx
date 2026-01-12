@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Modal, Button, Form, Alert, Spinner } from 'react-bootstrap';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   exportTeamData,
   importTeamData,
@@ -9,6 +10,7 @@ import {
 } from '../../services/firebase/teamDataExport';
 
 export default function ExportImportModal({ show, onHide, team, onImportComplete }) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -74,7 +76,7 @@ export default function ExportImportModal({ show, onHide, team, onImportComplete
 
     try {
       const data = await readImportFile(selectedFile);
-      const result = await importTeamData(team.id, data, importMode);
+      const result = await importTeamData(team.id, data, importMode, user.uid);
 
       setSuccess(
         `Successfully imported ${result.vehiclesImported} vehicle(s), ` +

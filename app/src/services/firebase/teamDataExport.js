@@ -183,9 +183,10 @@ export function validateImportData(data) {
  * @param {string} teamId - Team ID to import into
  * @param {Object} data - Import data
  * @param {string} mode - Import mode: 'new' (create new vehicles), 'replace' (replace existing)
+ * @param {string} userId - User ID performing the import
  * @returns {Promise<Object>} Import result
  */
-export async function importTeamData(teamId, data, mode = 'new') {
+export async function importTeamData(teamId, data, mode = 'new', userId) {
   // Validate data
   const validation = validateImportData(data);
   if (!validation.valid) {
@@ -266,6 +267,7 @@ export async function importTeamData(teamId, data, mode = 'new') {
         const usageData = {
           ...usage,
           vehicle_id: newVehicleId,
+          created_by: userId,
           created_at: Timestamp.now(),
           version: 1,
         };

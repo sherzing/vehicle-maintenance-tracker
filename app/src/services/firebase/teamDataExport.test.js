@@ -271,7 +271,7 @@ describe('teamDataExport service', () => {
       firestore.addDoc.mockResolvedValue({ id: 'new-vehicle-id' });
       firestore.setDoc.mockResolvedValue();
 
-      const result = await importTeamData('team123', validImportData, 'new');
+      const result = await importTeamData('team123', validImportData, 'new', 'user123');
 
       expect(firestore.addDoc).toHaveBeenCalled();
       expect(result.success).toBe(true);
@@ -281,14 +281,14 @@ describe('teamDataExport service', () => {
     it('should validate data before import', async () => {
       const invalidData = { teamId: 'team123' }; // missing vehicles
 
-      await expect(importTeamData('team123', invalidData, 'new')).rejects.toThrow();
+      await expect(importTeamData('team123', invalidData, 'new', 'user123')).rejects.toThrow();
     });
 
     it('should handle import errors gracefully', async () => {
       firestore.addDoc.mockRejectedValue(new Error('Firestore error'));
 
       await expect(
-        importTeamData('team123', validImportData, 'new')
+        importTeamData('team123', validImportData, 'new', 'user123')
       ).rejects.toThrow('Firestore error');
     });
 
@@ -297,7 +297,7 @@ describe('teamDataExport service', () => {
       firestore.addDoc.mockResolvedValue({ id: vehicleId });
       firestore.setDoc.mockResolvedValue();
 
-      await importTeamData('team123', validImportData, 'new');
+      await importTeamData('team123', validImportData, 'new', 'user123');
 
       // Should create vehicle
       const addDocCall = firestore.addDoc.mock.calls[0];
@@ -339,7 +339,7 @@ describe('teamDataExport service', () => {
         toDate: () => date,
       }));
 
-      await importTeamData('team123', dataWithHistory, 'new');
+      await importTeamData('team123', dataWithHistory, 'new', 'user123');
 
       // Check that setDoc was called with service history (2nd call after maintenance item)
       const serviceHistoryCall = firestore.setDoc.mock.calls[1];
