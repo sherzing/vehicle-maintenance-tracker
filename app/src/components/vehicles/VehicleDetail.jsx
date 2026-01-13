@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Spinner, Alert } from 'react-bootstrap';
+import { Spinner, Alert, Dropdown } from 'react-bootstrap';
 import { useAuth } from '../../contexts/AuthContext';
 import { getVehicle } from '../../services/firebase/vehicles';
 import { getVehicleMaintenanceItems, getVehicleServiceHistory } from '../../services/firebase/maintenanceItems';
@@ -12,6 +12,7 @@ import LogRepairModal from '../maintenance/LogRepairModal';
 import LogUsageModal from './LogUsageModal';
 import EditVehicleModal from './EditVehicleModal';
 import EditServiceModal from '../maintenance/EditServiceModal';
+import ResetVehicleHistoryModal from './ResetVehicleHistoryModal';
 
 export default function VehicleDetail({ vehicleId }) {
   const { user } = useAuth();
@@ -27,6 +28,7 @@ export default function VehicleDetail({ vehicleId }) {
   const [showLogUsageModal, setShowLogUsageModal] = useState(false);
   const [showEditVehicleModal, setShowEditVehicleModal] = useState(false);
   const [showEditServiceModal, setShowEditServiceModal] = useState(false);
+  const [showResetHistoryModal, setShowResetHistoryModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
 
@@ -152,6 +154,24 @@ export default function VehicleDetail({ vehicleId }) {
             >
               Log Usage
             </button>
+            <Dropdown>
+              <Dropdown.Toggle
+                variant="outline-secondary"
+                id="vehicle-settings-dropdown"
+                size="sm"
+              >
+                ⚙️ Settings
+              </Dropdown.Toggle>
+
+              <Dropdown.Menu>
+                <Dropdown.Item
+                  onClick={() => setShowResetHistoryModal(true)}
+                  className="text-danger"
+                >
+                  Reset History
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
           </div>
         </div>
 
@@ -413,6 +433,13 @@ export default function VehicleDetail({ vehicleId }) {
         onServiceUpdated={handleServiceUpdated}
         service={selectedService}
         usageUnit={vehicle.usage_unit}
+      />
+
+      <ResetVehicleHistoryModal
+        show={showResetHistoryModal}
+        onHide={() => setShowResetHistoryModal(false)}
+        onComplete={loadVehicleData}
+        vehicle={vehicle}
       />
     </div>
   );
