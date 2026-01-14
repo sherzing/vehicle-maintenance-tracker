@@ -161,9 +161,10 @@ describe('ExportImportModal', () => {
     it('should display import mode selector', () => {
       renderModal();
 
-      const modeSelector = screen.getByLabelText(/import mode/i);
+      const modeSelector = screen.getByLabelText(/what to import/i);
       expect(modeSelector).toBeInTheDocument();
-      expect(screen.getByText(/create as new vehicles/i)).toBeInTheDocument();
+      expect(screen.getByText(/everything \(recommended\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/vehicle \+ maintenance schedules only/i)).toBeInTheDocument();
     });
 
     it('should validate file on selection', async () => {
@@ -308,8 +309,9 @@ describe('ExportImportModal', () => {
         expect(teamDataExport.importTeamData).toHaveBeenCalledWith(
           'team123',
           mockFileData,
-          'new',
-          'user123'
+          'full',
+          'user123',
+          { overwriteExisting: false }
         );
       });
     });

@@ -14,7 +14,8 @@ export default function ExportImportModal({ show, onHide, team, onImportComplete
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [importMode, setImportMode] = useState('new');
+  const [importMode, setImportMode] = useState('full');
+  const [overwriteExisting, setOverwriteExisting] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [validationErrors, setValidationErrors] = useState([]);
 
@@ -76,18 +77,27 @@ export default function ExportImportModal({ show, onHide, team, onImportComplete
 
     try {
       const data = await readImportFile(selectedFile);
-      const result = await importTeamData(team.id, data, importMode, user.uid);
+      const result = await importTeamData(team.id, data, importMode, user.uid, { overwriteExisting });
 
-      setSuccess(
-        `Successfully imported ${result.vehiclesImported} vehicle(s), ` +
-        `${result.maintenanceItemsImported} maintenance item(s), ` +
+      let successMessage = `Successfully imported ${result.vehiclesImported} vehicle(s)`;
+
+      if (result.vehiclesSkipped > 0) {
+        successMessage += `, skipped ${result.vehiclesSkipped} existing vehicle(s)`;
+      }
+      if (result.vehiclesReplaced > 0) {
+        successMessage += `, replaced ${result.vehiclesReplaced} existing vehicle(s)`;
+      }
+
+      successMessage += `, ${result.maintenanceItemsImported} maintenance item(s), ` +
         `${result.serviceHistoryImported} service record(s), and ` +
-        `${result.usageHistoryImported} usage record(s).`
-      );
+        `${result.usageHistoryImported} usage record(s).`;
+
+      setSuccess(successMessage);
 
       // Reset form
       setSelectedFile(null);
       setValidationErrors([]);
+      setOverwriteExisting(false);
       document.getElementById('import-file-input').value = '';
 
       // Notify parent to reload data
@@ -169,20 +179,39 @@ export default function ExportImportModal({ show, onHide, team, onImportComplete
           </p>
 
           <Form.Group className="mb-3">
-            <Form.Label htmlFor="import-mode-select">Import Mode</Form.Label>
+            <Form.Label htmlFor="import-mode-select">What to Import</Form.Label>
             <Form.Select
               id="import-mode-select"
               value={importMode}
               onChange={(e) => setImportMode(e.target.value)}
               disabled={loading}
             >
-              <option value="new">Create as new vehicles (recommended)</option>
-              <option value="replace" disabled>Replace existing data (coming soon)</option>
+              <option value="full">Everything (recommended)</option>
+              <option value="vehicle-maintenance-items">Vehicle + Maintenance Schedules Only</option>
+              <option value="vehicle-maintenance">Vehicle + Maintenance (no usage history)</option>
+              <option value="vehicle-only">Vehicle Data Only (no maintenance or history)</option>
             </Form.Select>
             <Form.Text className="text-muted">
-              {importMode === 'new'
-                ? 'Imported vehicles will be created as new entries. Existing data will not be affected.'
-                : 'This will replace all existing vehicles and their data.'}
+              {importMode === 'full' && 'Import complete vehicle data including all maintenance items, service history, and usage history'}
+              {importMode === 'vehicle-maintenance-items' && 'Import vehicle info and maintenance interval schedules only (no service or usage history)'}
+              {importMode === 'vehicle-maintenance' && 'Import vehicle info, maintenance schedules, and service history (no usage history)'}
+              {importMode === 'vehicle-only' && 'Import only vehicle information (no maintenance schedules or history)'}
+            </Form.Text>
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Check
+              type="checkbox"
+              id="overwrite-existing-check"
+              label="Overwrite existing vehicles with same VIN"
+              checked={overwriteExisting}
+              onChange={(e) => setOverwriteExisting(e.target.checked)}
+              disabled={loading}
+            />
+            <Form.Text className="text-muted">
+              {overwriteExisting
+                ? 'WARNING: This will delete and replace any existing vehicles that have the same VIN as vehicles in the import file.'
+                : 'Vehicles with VINs that already exist in this team will be skipped.'}
             </Form.Text>
           </Form.Group>
 

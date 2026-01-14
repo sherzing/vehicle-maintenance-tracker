@@ -350,5 +350,220 @@ describe('teamDataExport service', () => {
       });
       expect(serviceHistoryCall[1].service_date).toBeDefined();
     });
+
+    describe('Partial Import Modes', () => {
+      const completeData = {
+        teamId: 'team123',
+        exportDate: new Date().toISOString(),
+        vehicles: [
+          {
+            vehicleData: {
+              name: 'Test Car',
+              type: 'car',
+              make: 'Toyota',
+              model: 'Camry',
+              year: 2020,
+              current_usage: 50000,
+              unit: 'km',
+            },
+            maintenanceItems: [
+              { name: 'Oil Change', primary_interval: 5000 },
+              { name: 'Tire Rotation', primary_interval: 10000 },
+            ],
+            serviceHistory: [
+              { type: 'service', service_date: '2024-01-01T00:00:00.000Z', usage_at_service: 45000 },
+            ],
+            usageHistory: [
+              { usage: 50000, date: '2024-01-15T00:00:00.000Z' },
+            ],
+          },
+        ],
+      };
+
+      beforeEach(() => {
+        firestore.addDoc.mockResolvedValue({ id: 'new-vehicle-id' });
+        firestore.setDoc.mockResolvedValue();
+        vi.clearAllMocks();
+      });
+
+      it('should import vehicle-only (no maintenance, no history) when mode is vehicle-only', async () => {
+        const result = await importTeamData('team123', completeData, 'vehicle-only', 'user123');
+
+        expect(result.success).toBe(true);
+        expect(result.vehiclesImported).toBe(1);
+        expect(result.maintenanceItemsImported).toBe(0);
+        expect(result.serviceHistoryImported).toBe(0);
+        expect(result.usageHistoryImported).toBe(0);
+
+        // Should only create vehicle
+        expect(firestore.addDoc).toHaveBeenCalledTimes(1);
+        expect(firestore.setDoc).not.toHaveBeenCalled();
+      });
+
+      it('should import vehicle + maintenance items only when mode is vehicle-maintenance-items', async () => {
+        const result = await importTeamData('team123', completeData, 'vehicle-maintenance-items', 'user123');
+
+        expect(result.success).toBe(true);
+        expect(result.vehiclesImported).toBe(1);
+        expect(result.maintenanceItemsImported).toBe(2);
+        expect(result.serviceHistoryImported).toBe(0);
+        expect(result.usageHistoryImported).toBe(0);
+
+        // Should create vehicle + maintenance items
+        expect(firestore.addDoc).toHaveBeenCalledTimes(1); // vehicle
+        expect(firestore.setDoc).toHaveBeenCalledTimes(2); // 2 maintenance items
+      });
+
+      it('should import vehicle + maintenance (no usage) when mode is vehicle-maintenance', async () => {
+        const result = await importTeamData('team123', completeData, 'vehicle-maintenance', 'user123');
+
+        expect(result.success).toBe(true);
+        expect(result.vehiclesImported).toBe(1);
+        expect(result.maintenanceItemsImported).toBe(2);
+        expect(result.serviceHistoryImported).toBe(1);
+        expect(result.usageHistoryImported).toBe(0);
+
+        // Should create vehicle + maintenance items + service history
+        expect(firestore.addDoc).toHaveBeenCalledTimes(1); // vehicle
+        expect(firestore.setDoc).toHaveBeenCalledTimes(3); // 2 maintenance items + 1 service
+      });
+
+      it('should import everything when mode is full (default)', async () => {
+        const result = await importTeamData('team123', completeData, 'full', 'user123');
+
+        expect(result.success).toBe(true);
+        expect(result.vehiclesImported).toBe(1);
+        expect(result.maintenanceItemsImported).toBe(2);
+        expect(result.serviceHistoryImported).toBe(1);
+        expect(result.usageHistoryImported).toBe(1);
+
+        // Should create everything
+        expect(firestore.addDoc).toHaveBeenCalledTimes(1); // vehicle
+        expect(firestore.setDoc).toHaveBeenCalledTimes(4); // 2 maintenance + 1 service + 1 usage
+      });
+
+      it('should default to full import when mode is not specified', async () => {
+        const result = await importTeamData('team123', completeData, undefined, 'user123');
+
+        expect(result.vehiclesImported).toBe(1);
+        expect(result.maintenanceItemsImported).toBe(2);
+        expect(result.serviceHistoryImported).toBe(1);
+        expect(result.usageHistoryImported).toBe(1);
+      });
+    });
+
+    describe('Overwrite Existing Vehicles', () => {
+      const importData = {
+        teamId: 'team123',
+        vehicles: [
+          {
+            vehicleData: {
+              name: 'Updated Car',
+              type: 'car',
+              make: 'Toyota',
+              model: 'Camry',
+              year: 2021,
+              vin: 'VIN12345',
+              current_usage: 60000,
+              unit: 'km',
+            },
+            maintenanceItems: [{ name: 'New Oil Change', primary_interval: 7500 }],
+            serviceHistory: [],
+            usageHistory: [],
+          },
+        ],
+      };
+
+      beforeEach(() => {
+        vi.clearAllMocks();
+      });
+
+      it('should skip existing vehicle when overwrite is false', async () => {
+        // Mock getDocs to return existing vehicle with same VIN
+        firestore.getDocs.mockResolvedValue({
+          docs: [
+            {
+              id: 'existing-vehicle-id',
+              data: () => ({ vin: 'VIN12345', name: 'Old Car' }),
+            },
+          ],
+        });
+
+        const options = { overwriteExisting: false };
+        const result = await importTeamData('team123', importData, 'full', 'user123', options);
+
+        expect(result.vehiclesImported).toBe(0);
+        expect(result.vehiclesSkipped).toBe(1);
+        expect(firestore.addDoc).not.toHaveBeenCalled();
+      });
+
+      it('should replace existing vehicle when overwrite is true', async () => {
+        // Mock getDocs to return existing vehicle
+        firestore.getDocs.mockResolvedValueOnce({
+          docs: [
+            {
+              id: 'existing-vehicle-id',
+              ref: 'existing-vehicle-ref',
+              data: () => ({ vin: 'VIN12345', name: 'Old Car' }),
+            },
+          ],
+        });
+
+        // Mock deleteDoc
+        firestore.deleteDoc = vi.fn().mockResolvedValue();
+
+        // Mock addDoc for new vehicle
+        firestore.addDoc.mockResolvedValue({ id: 'new-vehicle-id' });
+        firestore.setDoc.mockResolvedValue();
+
+        const options = { overwriteExisting: true };
+        const result = await importTeamData('team123', importData, 'full', 'user123', options);
+
+        expect(result.vehiclesImported).toBe(1);
+        expect(result.vehiclesReplaced).toBe(1);
+        expect(firestore.deleteDoc).toHaveBeenCalled();
+        expect(firestore.addDoc).toHaveBeenCalled();
+      });
+
+      it('should create new vehicle when VIN does not exist', async () => {
+        // Mock getDocs to return no existing vehicles
+        firestore.getDocs.mockResolvedValue({ docs: [] });
+        firestore.addDoc.mockResolvedValue({ id: 'new-vehicle-id' });
+        firestore.setDoc.mockResolvedValue();
+
+        const options = { overwriteExisting: true };
+        const result = await importTeamData('team123', importData, 'full', 'user123', options);
+
+        expect(result.vehiclesImported).toBe(1);
+        expect(result.vehiclesReplaced).toBe(0);
+        expect(firestore.addDoc).toHaveBeenCalled();
+      });
+
+      it('should handle vehicles without VIN (always create new)', async () => {
+        const dataWithoutVIN = {
+          ...importData,
+          vehicles: [
+            {
+              ...importData.vehicles[0],
+              vehicleData: {
+                ...importData.vehicles[0].vehicleData,
+                vin: undefined,
+              },
+            },
+          ],
+        };
+
+        firestore.addDoc.mockResolvedValue({ id: 'new-vehicle-id' });
+        firestore.setDoc.mockResolvedValue();
+
+        const options = { overwriteExisting: true };
+        const result = await importTeamData('team123', dataWithoutVIN, 'full', 'user123', options);
+
+        expect(result.vehiclesImported).toBe(1);
+        expect(result.vehiclesReplaced).toBe(0);
+        // Should not check for existing vehicles when no VIN
+        expect(firestore.getDocs).not.toHaveBeenCalled();
+      });
+    });
   });
 });

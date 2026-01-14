@@ -4,6 +4,7 @@ import {
   getDocs,
   addDoc,
   setDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -179,14 +180,18 @@ export function validateImportData(data) {
 }
 
 /**
- * Import team data
+ * Import team data with support for partial imports and overwriting
  * @param {string} teamId - Team ID to import into
  * @param {Object} data - Import data
- * @param {string} mode - Import mode: 'new' (create new vehicles), 'replace' (replace existing)
+ * @param {string} mode - Import mode: 'full', 'vehicle-only', 'vehicle-maintenance-items', 'vehicle-maintenance'
  * @param {string} userId - User ID performing the import
+ * @param {Object} options - Import options { overwriteExisting: boolean }
  * @returns {Promise<Object>} Import result
  */
-export async function importTeamData(teamId, data, mode = 'new', userId) {
+export async function importTeamData(teamId, data, mode = 'full', userId, options = {}) {
+  // Normalize mode: 'new' was old mode, treat as 'full'
+  const importMode = mode === 'new' ? 'full' : mode;
+
   // Validate data
   const validation = validateImportData(data);
   if (!validation.valid) {
@@ -196,14 +201,88 @@ export async function importTeamData(teamId, data, mode = 'new', userId) {
   const result = {
     success: true,
     vehiclesImported: 0,
+    vehiclesSkipped: 0,
+    vehiclesReplaced: 0,
     maintenanceItemsImported: 0,
     serviceHistoryImported: 0,
     usageHistoryImported: 0,
     errors: [],
   };
 
+  const { overwriteExisting = false } = options;
+
   try {
     for (const vehicleExport of data.vehicles) {
+      let newVehicleId = null;
+      let shouldImport = true;
+
+      // Check if vehicle already exists (by VIN if available)
+      if (vehicleExport.vehicleData.vin && overwriteExisting) {
+        const existingQuery = query(
+          collection(db, 'vehicles'),
+          where('team_id', '==', teamId),
+          where('vin', '==', vehicleExport.vehicleData.vin)
+        );
+        const existingSnapshot = await getDocs(existingQuery);
+
+        if (existingSnapshot.docs && existingSnapshot.docs.length > 0) {
+          // Delete existing vehicle and all its related data
+          const existingVehicle = existingSnapshot.docs[0];
+          const existingVehicleId = existingVehicle.id;
+
+          // Delete maintenance items
+          const maintenanceQuery = query(
+            collection(db, 'maintenance_items'),
+            where('vehicle_id', '==', existingVehicleId)
+          );
+          const maintenanceSnapshot = await getDocs(maintenanceQuery);
+          for (const itemDoc of maintenanceSnapshot.docs) {
+            await deleteDoc(itemDoc.ref);
+          }
+
+          // Delete service history
+          const serviceQuery = query(
+            collection(db, 'service_history'),
+            where('vehicle_id', '==', existingVehicleId)
+          );
+          const serviceSnapshot = await getDocs(serviceQuery);
+          for (const serviceDoc of serviceSnapshot.docs) {
+            await deleteDoc(serviceDoc.ref);
+          }
+
+          // Delete usage history
+          const usageQuery = query(
+            collection(db, 'usage_history'),
+            where('vehicle_id', '==', existingVehicleId)
+          );
+          const usageSnapshot = await getDocs(usageQuery);
+          for (const usageDoc of usageSnapshot.docs) {
+            await deleteDoc(usageDoc.ref);
+          }
+
+          // Delete vehicle
+          await deleteDoc(existingVehicle.ref);
+          result.vehiclesReplaced++;
+        }
+      } else if (vehicleExport.vehicleData.vin && !overwriteExisting) {
+        // Check if vehicle exists and skip if overwrite is disabled
+        const existingQuery = query(
+          collection(db, 'vehicles'),
+          where('team_id', '==', teamId),
+          where('vin', '==', vehicleExport.vehicleData.vin)
+        );
+        const existingSnapshot = await getDocs(existingQuery);
+
+        if (existingSnapshot.docs && existingSnapshot.docs.length > 0) {
+          result.vehiclesSkipped++;
+          shouldImport = false;
+        }
+      }
+
+      if (!shouldImport) {
+        continue;
+      }
+
       // Prepare vehicle data
       const vehicleData = {
         ...vehicleExport.vehicleData,
@@ -220,67 +299,78 @@ export async function importTeamData(teamId, data, mode = 'new', userId) {
 
       // Create new vehicle
       const vehicleRef = await addDoc(collection(db, 'vehicles'), vehicleData);
-      const newVehicleId = vehicleRef.id;
+      newVehicleId = vehicleRef.id;
       result.vehiclesImported++;
 
+      // Import based on mode
+      const shouldImportMaintenance = ['full', 'vehicle-maintenance-items', 'vehicle-maintenance'].includes(importMode);
+      const shouldImportService = ['full', 'vehicle-maintenance'].includes(importMode);
+      const shouldImportUsage = importMode === 'full';
+
       // Import maintenance items
-      for (const item of vehicleExport.maintenanceItems) {
-        const itemData = {
-          ...item,
-          vehicle_id: newVehicleId,
-          created_at: Timestamp.now(),
-          updated_at: Timestamp.now(),
-        };
-        delete itemData.id;
+      if (shouldImportMaintenance) {
+        for (const item of vehicleExport.maintenanceItems) {
+          const itemData = {
+            ...item,
+            vehicle_id: newVehicleId,
+            created_at: Timestamp.now(),
+            updated_at: Timestamp.now(),
+          };
+          delete itemData.id;
 
-        // Convert date strings back to Timestamps
-        if (itemData.last_serviced_date && typeof itemData.last_serviced_date === 'string') {
-          itemData.last_serviced_date = Timestamp.fromDate(new Date(itemData.last_serviced_date));
+          // Convert date strings back to Timestamps
+          if (itemData.last_serviced_date && typeof itemData.last_serviced_date === 'string') {
+            itemData.last_serviced_date = Timestamp.fromDate(new Date(itemData.last_serviced_date));
+          }
+
+          const itemRef = doc(collection(db, 'maintenance_items'));
+          await setDoc(itemRef, itemData);
+          result.maintenanceItemsImported++;
         }
-
-        const itemRef = doc(collection(db, 'maintenance_items'));
-        await setDoc(itemRef, itemData);
-        result.maintenanceItemsImported++;
       }
 
       // Import service history
-      for (const service of vehicleExport.serviceHistory) {
-        const serviceData = {
-          ...service,
-          vehicle_id: newVehicleId,
-          logged_at: Timestamp.now(),
-        };
-        delete serviceData.id;
+      if (shouldImportService) {
+        for (const service of vehicleExport.serviceHistory) {
+          const serviceData = {
+            ...service,
+            vehicle_id: newVehicleId,
+            logged_at: Timestamp.now(),
+          };
+          delete serviceData.id;
 
-        // Convert date strings to Timestamps
-        if (serviceData.service_date && typeof serviceData.service_date === 'string') {
-          serviceData.service_date = Timestamp.fromDate(new Date(serviceData.service_date));
+          // Convert date strings to Timestamps
+          if (serviceData.service_date && typeof serviceData.service_date === 'string') {
+            serviceData.service_date = Timestamp.fromDate(new Date(serviceData.service_date));
+          }
+
+          const serviceRef = doc(collection(db, 'service_history'));
+          await setDoc(serviceRef, serviceData);
+          result.serviceHistoryImported++;
         }
-
-        const serviceRef = doc(collection(db, 'service_history'));
-        await setDoc(serviceRef, serviceData);
-        result.serviceHistoryImported++;
       }
 
       // Import usage history
-      for (const usage of vehicleExport.usageHistory) {
-        const usageData = {
-          ...usage,
-          vehicle_id: newVehicleId,
-          created_by: userId,
-          created_at: Timestamp.now(),
-          version: 1,
-        };
-        delete usageData.id;
+      if (shouldImportUsage) {
+        for (const usage of vehicleExport.usageHistory) {
+          const usageData = {
+            ...usage,
+            vehicle_id: newVehicleId,
+            created_by: userId,
+            created_at: Timestamp.now(),
+            version: 1,
+          };
+          delete usageData.id;
 
-        // Convert date strings to Timestamps
-        if (usageData.date && typeof usageData.date === 'string') {
-          usageData.date = Timestamp.fromDate(new Date(usageData.date));
+          // Convert date strings to Timestamps
+          if (usageData.date && typeof usageData.date === 'string') {
+            usageData.date = Timestamp.fromDate(new Date(usageData.date));
+          }
+
+          const usageRef = doc(collection(db, 'usage_history'));
+          await setDoc(usageRef, usageData);
+          result.usageHistoryImported++;
         }
-
-        const usageRef = doc(collection(db, 'usage_history'));
-        await setDoc(usageRef, usageData);
-        result.usageHistoryImported++;
       }
     }
 
