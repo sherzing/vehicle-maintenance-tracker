@@ -144,12 +144,6 @@ export default function VehicleDetail({ vehicleId }) {
             </button>
             <button
               className="minimalist-btn-secondary"
-              onClick={() => setShowEditVehicleModal(true)}
-            >
-              Edit Vehicle
-            </button>
-            <button
-              className="minimalist-btn-secondary"
               onClick={() => setShowLogUsageModal(true)}
             >
               Log Usage
@@ -160,10 +154,14 @@ export default function VehicleDetail({ vehicleId }) {
                 id="vehicle-settings-dropdown"
                 size="sm"
               >
-                ⚙️ Settings
+                ⚙️
               </Dropdown.Toggle>
 
               <Dropdown.Menu>
+                <Dropdown.Item onClick={() => setShowEditVehicleModal(true)}>
+                  Edit Vehicle
+                </Dropdown.Item>
+                <Dropdown.Divider />
                 <Dropdown.Item
                   onClick={() => setShowResetHistoryModal(true)}
                   className="text-danger"

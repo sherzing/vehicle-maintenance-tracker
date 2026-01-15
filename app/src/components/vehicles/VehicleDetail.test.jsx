@@ -324,7 +324,7 @@ describe('VehicleDetail', () => {
     expect(screen.getByTestId('log-repair-modal')).toBeInTheDocument();
   });
 
-  it('should open Edit Vehicle modal when Edit Vehicle button is clicked', async () => {
+  it('should open Edit Vehicle modal when Edit Vehicle menu item is clicked', async () => {
     vehiclesService.getVehicle.mockResolvedValueOnce(mockVehicle);
     maintenanceItemsService.getVehicleMaintenanceItems.mockResolvedValueOnce(mockMaintenanceItems);
     maintenanceItemsService.getVehicleServiceHistory.mockResolvedValueOnce(mockServiceHistory);
@@ -335,8 +335,13 @@ describe('VehicleDetail', () => {
       expect(screen.getByText('Tesla Model 3')).toBeInTheDocument();
     });
 
-    const editVehicleButton = screen.getByRole('button', { name: 'Edit Vehicle' });
-    fireEvent.click(editVehicleButton);
+    // Open the settings dropdown
+    const settingsButton = screen.getByRole('button', { name: '⚙️' });
+    fireEvent.click(settingsButton);
+
+    // Click on Edit Vehicle menu item
+    const editVehicleMenuItem = screen.getByText('Edit Vehicle');
+    fireEvent.click(editVehicleMenuItem);
 
     expect(screen.getByTestId('edit-vehicle-modal')).toBeInTheDocument();
   });
