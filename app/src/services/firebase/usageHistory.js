@@ -176,8 +176,21 @@ async function recalculateCurrentUsage(vehicleId) {
 }
 
 /**
+ * Check if a date is today (same calendar day in local timezone)
+ * @param {Date} date - Date to check
+ * @returns {boolean} True if date is today
+ * @private
+ */
+function isToday(date) {
+  const today = new Date();
+  return date.getFullYear() === today.getFullYear() &&
+         date.getMonth() === today.getMonth() &&
+         date.getDate() === today.getDate();
+}
+
+/**
  * Log a usage update for a vehicle
- * Creates usage_history entry and recalculates vehicle.current_usage
+ * Creates usage_history entry and updates vehicle.current_usage only if date is today
  * @param {string} vehicleId - Vehicle ID
  * @param {number} usage - Usage reading (km or hours)
  * @param {Date} date - Date of the reading
@@ -211,8 +224,13 @@ export async function logUsageUpdate(vehicleId, usage, date, usageType = null, l
 
   const usageRef = await addDoc(collection(db, 'usage_history'), usageEntry);
 
-  // Recalculate current_usage to most recent by date
-  await recalculateCurrentUsage(vehicleId);
+  // Only update current_usage if the logged date is today
+  // Past usage entries are just historical records and don't affect current_usage
+  if (isToday(date)) {
+    await updateVehicle(vehicleId, {
+      current_usage: usage,
+    });
+  }
 
   return usageRef.id;
 }
@@ -246,7 +264,7 @@ export async function getVehicleUsageHistory(vehicleId) {
 }
 
 /**
- * Update a usage history entry and recalculate vehicle.current_usage
+ * Update a usage history entry and update vehicle.current_usage if date is today
  * Uses optimistic locking with version field to prevent race conditions
  * @param {string} historyId - Usage history entry ID
  * @param {number} usage - Updated usage value
@@ -302,12 +320,19 @@ export async function updateUsageHistory(historyId, usage, date, usageType = nul
     return vehicleId;
   });
 
-  // Recalculate current_usage to most recent by date
-  await recalculateCurrentUsage(vehicleId);
+  // Only update current_usage if the updated date is today
+  // Past usage entries don't affect current_usage
+  if (isToday(date)) {
+    await updateVehicle(vehicleId, {
+      current_usage: usage,
+    });
+  }
 }
 
 /**
- * Delete a usage history entry and recalculate vehicle.current_usage
+ * Delete a usage history entry
+ * Note: This does NOT update vehicle.current_usage. The user should manually
+ * log a new usage entry if they want to update current_usage.
  * @param {string} historyId - Usage history entry ID
  */
 export async function deleteUsageHistory(historyId) {
@@ -331,6 +356,6 @@ export async function deleteUsageHistory(historyId) {
   // Delete the usage history entry
   await deleteDoc(historyRef);
 
-  // Recalculate current_usage to most recent by date
-  await recalculateCurrentUsage(vehicleId);
+  // Note: We don't update current_usage when deleting usage history.
+  // Current usage remains unchanged and can be manually updated by the user.
 }

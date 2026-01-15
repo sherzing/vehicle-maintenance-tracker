@@ -39,22 +39,12 @@ describe('usageHistory service', () => {
   });
 
   describe('logUsageUpdate', () => {
-    it('should create usage history entry with all fields', async () => {
+    it('should create usage history entry with all fields and update current_usage when date is today', async () => {
       const mockUsageRef = { id: 'usage123' };
       firestore.addDoc.mockResolvedValue(mockUsageRef);
 
-      // Mock getVehicleUsageHistory to return this as most recent
-      firestore.getDocs.mockResolvedValue({
-        docs: [{
-          id: 'usage123',
-          data: () => ({
-            usage: 55000,
-            date: new Date('2024-01-20'),
-          }),
-        }],
-      });
-
-      const date = new Date('2024-01-20');
+      // Use today's date
+      const date = new Date();
       await logUsageUpdate('vehicle123', 55000, date, 'track day', 'Laguna Seca', 'user123');
 
       // Check that addDoc was called with correct data including version
@@ -71,27 +61,18 @@ describe('usageHistory service', () => {
         updated_by: null,
       });
 
-      // Check that vehicle.current_usage was updated
+      // Check that vehicle.current_usage was updated (because date is today)
       expect(vehicles.updateVehicle).toHaveBeenCalledWith('vehicle123', {
         current_usage: 55000,
       });
     });
 
-    it('should handle null optional fields and update vehicle current_usage', async () => {
+    it('should handle null optional fields and update vehicle current_usage when date is today', async () => {
       const mockUsageRef = { id: 'usage123' };
       firestore.addDoc.mockResolvedValue(mockUsageRef);
 
-      firestore.getDocs.mockResolvedValue({
-        docs: [{
-          id: 'usage123',
-          data: () => ({
-            usage: 50000,
-            date: new Date('2024-01-15'),
-          }),
-        }],
-      });
-
-      const date = new Date('2024-01-15');
+      // Use today's date
+      const date = new Date();
       await logUsageUpdate('vehicle123', 50000, date, null, null, 'user123');
 
       // Verify all required fields are included (including updated_by and version)
@@ -114,38 +95,24 @@ describe('usageHistory service', () => {
       });
     });
 
-    it('should recalculate current_usage to most recent by date', async () => {
+    it('should NOT update current_usage when logging past usage', async () => {
       const mockUsageRef = { id: 'usage456' };
       firestore.addDoc.mockResolvedValue(mockUsageRef);
 
-      // Mock existing history - most recent is 60000 on Jan 25
-      firestore.getDocs.mockResolvedValue({
-        docs: [
-          {
-            id: 'usage789',
-            data: () => ({
-              usage: 60000,
-              date: new Date('2024-01-25'),
-            }),
-          },
-          {
-            id: 'usage456',
-            data: () => ({
-              usage: 45000,
-              date: new Date('2024-01-10'),
-            }),
-          },
-        ],
-      });
-
-      // Log a past usage (Jan 10 with 45000)
-      const date = new Date('2024-01-10');
+      // Log a past usage (clearly in the past - year 2020)
+      const date = new Date('2020-01-10');
       await logUsageUpdate('vehicle123', 45000, date, null, null, 'user123');
 
-      // Should update to most recent (60000 from Jan 25)
-      expect(vehicles.updateVehicle).toHaveBeenCalledWith('vehicle123', {
-        current_usage: 60000,
+      // Entry should be created
+      const addDocCall = firestore.addDoc.mock.calls[0];
+      expect(addDocCall[1]).toMatchObject({
+        vehicle_id: 'vehicle123',
+        usage: 45000,
+        date: date,
       });
+
+      // But current_usage should NOT be updated (past entry)
+      expect(vehicles.updateVehicle).not.toHaveBeenCalled();
     });
   });
 
@@ -230,7 +197,7 @@ describe('usageHistory service', () => {
   });
 
   describe('updateUsageHistory', () => {
-    it('should update usage history entry and recalculate current_usage', async () => {
+    it('should update usage history entry and update current_usage when date is today', async () => {
       // Mock runTransaction to execute the callback
       const mockTransaction = {
         get: vi.fn().mockResolvedValue({
@@ -238,7 +205,7 @@ describe('usageHistory service', () => {
           data: () => ({
             vehicle_id: 'vehicle123',
             usage: 45000,
-            date: new Date('2024-01-10'),
+            date: new Date('2020-01-10'),
             version: 1,
           }),
         }),
@@ -249,27 +216,8 @@ describe('usageHistory service', () => {
         return await callback(mockTransaction);
       });
 
-      // Mock getDocs for recalculation - most recent becomes 52000 on Jan 25
-      firestore.getDocs.mockResolvedValue({
-        docs: [
-          {
-            id: 'usage1',
-            data: () => ({
-              usage: 52000,
-              date: new Date('2024-01-25'),
-            }),
-          },
-          {
-            id: 'usage2',
-            data: () => ({
-              usage: 48000,
-              date: new Date('2024-01-15'),
-            }),
-          },
-        ],
-      });
-
-      const newDate = new Date('2024-01-25');
+      // Update to today's date
+      const newDate = new Date();
       await updateUsageHistory('usage1', 52000, newDate, 'track day', 'Sonoma', 'user123');
 
       // Check that transaction.update was called with incremented version
@@ -283,7 +231,7 @@ describe('usageHistory service', () => {
         version: 2, // Version should be incremented
       });
 
-      // Check that current_usage was recalculated
+      // Check that current_usage was updated (because date is today)
       expect(vehicles.updateVehicle).toHaveBeenCalledWith('vehicle123', {
         current_usage: 52000,
       });
@@ -306,7 +254,7 @@ describe('usageHistory service', () => {
       ).rejects.toThrow('Usage history entry not found');
     });
 
-    it('should recalculate to different entry when date changes', async () => {
+    it('should NOT update current_usage when updating to past date', async () => {
       // Mock runTransaction for the entry being updated
       const mockTransaction = {
         get: vi.fn().mockResolvedValue({
@@ -325,34 +273,15 @@ describe('usageHistory service', () => {
         return await callback(mockTransaction);
       });
 
-      // After update, a different entry is most recent
-      firestore.getDocs.mockResolvedValue({
-        docs: [
-          {
-            id: 'usage2',
-            data: () => ({
-              usage: 48000,
-              date: new Date('2024-01-20'),
-            }),
-          },
-          {
-            id: 'usage1',
-            data: () => ({
-              usage: 50000,
-              date: new Date('2024-01-15'),
-            }),
-          },
-        ],
-      });
-
-      // Change date from Jan 25 to Jan 15 (makes it no longer most recent)
-      const newDate = new Date('2024-01-15');
+      // Update to a past date (2020 - clearly in the past)
+      const newDate = new Date('2020-01-15');
       await updateUsageHistory('usage1', 50000, newDate, null, null, 'user123');
 
-      // Should recalculate to 48000 (new most recent on Jan 20)
-      expect(vehicles.updateVehicle).toHaveBeenCalledWith('vehicle123', {
-        current_usage: 48000,
-      });
+      // Transaction should update the entry
+      expect(mockTransaction.update).toHaveBeenCalled();
+
+      // But current_usage should NOT be updated (past date)
+      expect(vehicles.updateVehicle).not.toHaveBeenCalled();
     });
 
     it('should throw version conflict error when expectedVersion does not match', async () => {
@@ -388,7 +317,7 @@ describe('usageHistory service', () => {
           data: () => ({
             vehicle_id: 'vehicle123',
             usage: 45000,
-            date: new Date('2024-01-10'),
+            date: new Date('2020-01-10'),
             version: 5,
           }),
         }),
@@ -399,18 +328,7 @@ describe('usageHistory service', () => {
         return await callback(mockTransaction);
       });
 
-      // Mock getDocs for recalculation
-      firestore.getDocs.mockResolvedValue({
-        docs: [{
-          id: 'usage1',
-          data: () => ({
-            usage: 50000,
-            date: new Date('2024-01-15'),
-          }),
-        }],
-      });
-
-      const newDate = new Date('2024-01-15');
+      const newDate = new Date('2020-01-15');
       // Not passing expectedVersion (null) - should succeed regardless of current version
       await updateUsageHistory('usage1', 50000, newDate, null, null, 'user123');
 
@@ -419,6 +337,9 @@ describe('usageHistory service', () => {
       expect(updateCall[1]).toMatchObject({
         version: 6,
       });
+
+      // Should NOT update current_usage (past date)
+      expect(vehicles.updateVehicle).not.toHaveBeenCalled();
     });
 
     it('should handle entries without version field (legacy data)', async () => {
@@ -429,7 +350,7 @@ describe('usageHistory service', () => {
           data: () => ({
             vehicle_id: 'vehicle123',
             usage: 45000,
-            date: new Date('2024-01-10'),
+            date: new Date('2020-01-10'),
             // No version field
           }),
         }),
@@ -440,18 +361,7 @@ describe('usageHistory service', () => {
         return await callback(mockTransaction);
       });
 
-      // Mock getDocs for recalculation
-      firestore.getDocs.mockResolvedValue({
-        docs: [{
-          id: 'usage1',
-          data: () => ({
-            usage: 50000,
-            date: new Date('2024-01-15'),
-          }),
-        }],
-      });
-
-      const newDate = new Date('2024-01-15');
+      const newDate = new Date('2020-01-15');
       await updateUsageHistory('usage1', 50000, newDate, null, null, 'user123');
 
       // Should default to version 1 and increment to 2
@@ -459,37 +369,20 @@ describe('usageHistory service', () => {
       expect(updateCall[1]).toMatchObject({
         version: 2, // 1 (default) + 1
       });
+
+      // Should NOT update current_usage (past date)
+      expect(vehicles.updateVehicle).not.toHaveBeenCalled();
     });
   });
 
   describe('deleteUsageHistory', () => {
-    it('should delete usage history and update current_usage to next most recent', async () => {
+    it('should delete usage history without updating current_usage', async () => {
       // Mock getDoc for the entry being deleted
       firestore.getDoc.mockResolvedValue({
         exists: () => true,
         data: () => ({
           vehicle_id: 'vehicle123',
         }),
-      });
-
-      // After deletion, remaining entries
-      firestore.getDocs.mockResolvedValue({
-        docs: [
-          {
-            id: 'usage2',
-            data: () => ({
-              usage: 45000,
-              date: new Date('2024-01-10'),
-            }),
-          },
-          {
-            id: 'usage3',
-            data: () => ({
-              usage: 40000,
-              date: new Date('2024-01-05'),
-            }),
-          },
-        ],
       });
 
       await deleteUsageHistory('usage1');
@@ -497,32 +390,7 @@ describe('usageHistory service', () => {
       // Check that deleteDoc was called
       expect(firestore.deleteDoc).toHaveBeenCalledTimes(1);
 
-      // Check that current_usage was updated to most recent remaining
-      expect(vehicles.updateVehicle).toHaveBeenCalledWith('vehicle123', {
-        current_usage: 45000,
-      });
-    });
-
-    it('should not update current_usage when no history remains', async () => {
-      // Mock getDoc for the entry being deleted
-      firestore.getDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({
-          vehicle_id: 'vehicle123',
-        }),
-      });
-
-      // No remaining entries after deletion
-      firestore.getDocs.mockResolvedValue({
-        docs: [],
-      });
-
-      await deleteUsageHistory('usage1');
-
-      // Delete should still be called
-      expect(firestore.deleteDoc).toHaveBeenCalledTimes(1);
-
-      // But updateVehicle should NOT be called (no history to base it on)
+      // current_usage should NOT be updated when deleting usage history
       expect(vehicles.updateVehicle).not.toHaveBeenCalled();
     });
 
@@ -538,79 +406,35 @@ describe('usageHistory service', () => {
   });
 
   describe('Edge cases', () => {
-    it('should handle multiple entries on same date', async () => {
-      const mockUsageRef = { id: 'usage3' };
-      firestore.addDoc.mockResolvedValue(mockUsageRef);
-
-      // Multiple entries on Jan 15
-      firestore.getDocs.mockResolvedValue({
-        docs: [
-          {
-            id: 'usage1',
-            data: () => ({
-              usage: 50000,
-              date: new Date('2024-01-15'),
-            }),
-          },
-          {
-            id: 'usage2',
-            data: () => ({
-              usage: 50500,
-              date: new Date('2024-01-15'),
-            }),
-          },
-        ],
-      });
-
-      const date = new Date('2024-01-15');
-      await logUsageUpdate('vehicle123', 50000, date, null, null, 'user123');
-
-      // Should use first entry (deterministic but arbitrary)
-      expect(vehicles.updateVehicle).toHaveBeenCalledWith('vehicle123', {
-        current_usage: 50000,
-      });
-    });
-
     it('should handle decimal usage values', async () => {
       const mockUsageRef = { id: 'usage123' };
       firestore.addDoc.mockResolvedValue(mockUsageRef);
 
-      firestore.getDocs.mockResolvedValue({
-        docs: [{
-          id: 'usage123',
-          data: () => ({
-            usage: 123.5,
-            date: new Date('2024-01-15'),
-          }),
-        }],
-      });
-
-      const date = new Date('2024-01-15');
+      // Use today's date
+      const date = new Date();
       await logUsageUpdate('vehicle123', 123.5, date, null, null, 'user123');
 
       const addDocCall = firestore.addDoc.mock.calls[0];
       expect(addDocCall[1].usage).toBe(123.5);
+
+      // Should update current_usage (today's date)
+      expect(vehicles.updateVehicle).toHaveBeenCalledWith('vehicle123', {
+        current_usage: 123.5,
+      });
     });
 
     it('should handle zero usage value', async () => {
       const mockUsageRef = { id: 'usage123' };
       firestore.addDoc.mockResolvedValue(mockUsageRef);
 
-      firestore.getDocs.mockResolvedValue({
-        docs: [{
-          id: 'usage123',
-          data: () => ({
-            usage: 0,
-            date: new Date('2024-01-01'),
-          }),
-        }],
-      });
-
-      const date = new Date('2024-01-01');
+      const date = new Date('2020-01-01');
       await logUsageUpdate('vehicle123', 0, date, 'initial', null, 'user123');
 
       const addDocCall = firestore.addDoc.mock.calls[0];
       expect(addDocCall[1].usage).toBe(0);
+
+      // Should NOT update current_usage (past date)
+      expect(vehicles.updateVehicle).not.toHaveBeenCalled();
     });
   });
 });
