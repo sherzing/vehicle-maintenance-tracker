@@ -301,8 +301,10 @@ describe('VehicleDetail', () => {
       expect(screen.getByText('Maintenance Schedule')).toBeInTheDocument();
     });
 
-    const logServiceButton = screen.getByRole('button', { name: 'Log Service' });
-    fireEvent.click(logServiceButton);
+    // There are multiple Log Service buttons (header + one per maintenance item)
+    // Click the first one (the header button)
+    const logServiceButtons = screen.getAllByRole('button', { name: 'Log Service' });
+    fireEvent.click(logServiceButtons[0]);
 
     expect(screen.getByTestId('log-service-modal')).toBeInTheDocument();
   });

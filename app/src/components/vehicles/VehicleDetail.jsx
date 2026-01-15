@@ -138,6 +138,12 @@ export default function VehicleDetail({ vehicleId }) {
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button
               className="minimalist-btn-secondary"
+              onClick={() => setShowLogServiceModal(true)}
+            >
+              Log Service
+            </button>
+            <button
+              className="minimalist-btn-secondary"
               onClick={() => setShowLogRepairModal(true)}
             >
               Log Repair
