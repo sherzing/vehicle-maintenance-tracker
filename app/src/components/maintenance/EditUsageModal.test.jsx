@@ -153,7 +153,7 @@ describe('EditUsageModal', () => {
   });
 
   it('should successfully update usage entry', async () => {
-    usageHistoryService.updateUsageHistory.mockResolvedValue();
+    usageHistoryService.updateUsageHistory.mockResolvedValue({ conflict: false });
 
     render(
       <EditUsageModal
@@ -203,7 +203,7 @@ describe('EditUsageModal', () => {
       version: 2,
     };
 
-    usageHistoryService.updateUsageHistory.mockResolvedValue();
+    usageHistoryService.updateUsageHistory.mockResolvedValue({ conflict: false });
 
     render(
       <EditUsageModal
@@ -282,7 +282,7 @@ describe('EditUsageModal', () => {
   });
 
   it('should support decimal usage values', async () => {
-    usageHistoryService.updateUsageHistory.mockResolvedValue();
+    usageHistoryService.updateUsageHistory.mockResolvedValue({ conflict: false });
 
     render(
       <EditUsageModal

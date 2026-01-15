@@ -30,7 +30,11 @@ vi.mock('./config', () => ({
 // Mock vehicles service
 vi.mock('./vehicles', () => ({
   updateVehicle: vi.fn(),
-  getVehicle: vi.fn(),
+  getVehicle: vi.fn(() => Promise.resolve({
+    id: 'vehicle123',
+    current_usage: 40000,
+    usage_unit: 'km'
+  })),
 }));
 
 describe('usageHistory service', () => {
@@ -39,13 +43,18 @@ describe('usageHistory service', () => {
   });
 
   describe('logUsageUpdate', () => {
-    it('should create usage history entry with all fields and update current_usage when date is today', async () => {
+    it('should create usage history entry with all fields and update current_usage when usage is higher', async () => {
       const mockUsageRef = { id: 'usage123' };
       firestore.addDoc.mockResolvedValue(mockUsageRef);
 
+      // Mock getDocs to return empty history (no conflicts)
+      firestore.getDocs.mockResolvedValue({
+        docs: [],
+      });
+
       // Use today's date
       const date = new Date();
-      await logUsageUpdate('vehicle123', 55000, date, 'track day', 'Laguna Seca', 'user123');
+      const result = await logUsageUpdate('vehicle123', 55000, date, 'track day', 'Laguna Seca', 'user123');
 
       // Check that addDoc was called with correct data including version
       const addDocCall = firestore.addDoc.mock.calls[0];
@@ -61,19 +70,28 @@ describe('usageHistory service', () => {
         updated_by: null,
       });
 
-      // Check that vehicle.current_usage was updated (because date is today)
+      // Check that vehicle.current_usage was updated (because 55000 > 40000)
       expect(vehicles.updateVehicle).toHaveBeenCalledWith('vehicle123', {
         current_usage: 55000,
       });
+
+      // Check result has no conflict
+      expect(result.conflict).toBe(false);
+      expect(result.entryId).toBe('usage123');
     });
 
-    it('should handle null optional fields and update vehicle current_usage when date is today', async () => {
+    it('should handle null optional fields and update vehicle current_usage when usage is higher', async () => {
       const mockUsageRef = { id: 'usage123' };
       firestore.addDoc.mockResolvedValue(mockUsageRef);
 
+      // Mock getDocs to return empty history (no conflicts)
+      firestore.getDocs.mockResolvedValue({
+        docs: [],
+      });
+
       // Use today's date
       const date = new Date();
-      await logUsageUpdate('vehicle123', 50000, date, null, null, 'user123');
+      const result = await logUsageUpdate('vehicle123', 50000, date, null, null, 'user123');
 
       // Verify all required fields are included (including updated_by and version)
       const addDocCall = firestore.addDoc.mock.calls[0];
@@ -89,30 +107,39 @@ describe('usageHistory service', () => {
         version: 1,
       });
 
-      // Verify vehicle.current_usage is updated even with null optionals
+      // Verify vehicle.current_usage is updated (50000 > 40000)
       expect(vehicles.updateVehicle).toHaveBeenCalledWith('vehicle123', {
         current_usage: 50000,
       });
+
+      expect(result.conflict).toBe(false);
     });
 
-    it('should NOT update current_usage when logging past usage', async () => {
+    it('should NOT update current_usage when logging lower usage value', async () => {
       const mockUsageRef = { id: 'usage456' };
       firestore.addDoc.mockResolvedValue(mockUsageRef);
 
-      // Log a past usage (clearly in the past - year 2020)
+      // Mock getDocs - not needed since usage <= current_usage
+      firestore.getDocs.mockResolvedValue({
+        docs: [],
+      });
+
+      // Log a lower usage value (35000 < 40000 current)
       const date = new Date('2020-01-10');
-      await logUsageUpdate('vehicle123', 45000, date, null, null, 'user123');
+      const result = await logUsageUpdate('vehicle123', 35000, date, null, null, 'user123');
 
       // Entry should be created
       const addDocCall = firestore.addDoc.mock.calls[0];
       expect(addDocCall[1]).toMatchObject({
         vehicle_id: 'vehicle123',
-        usage: 45000,
+        usage: 35000,
         date: date,
       });
 
-      // But current_usage should NOT be updated (past entry)
+      // But current_usage should NOT be updated (lower value)
       expect(vehicles.updateVehicle).not.toHaveBeenCalled();
+
+      expect(result.conflict).toBe(false);
     });
   });
 
@@ -254,14 +281,14 @@ describe('usageHistory service', () => {
       ).rejects.toThrow('Usage history entry not found');
     });
 
-    it('should NOT update current_usage when updating to past date', async () => {
+    it('should NOT update current_usage when updating to lower value', async () => {
       // Mock runTransaction for the entry being updated
       const mockTransaction = {
         get: vi.fn().mockResolvedValue({
           exists: () => true,
           data: () => ({
             vehicle_id: 'vehicle123',
-            usage: 55000,
+            usage: 45000,
             date: new Date('2024-01-25'),
             version: 1,
           }),
@@ -273,15 +300,22 @@ describe('usageHistory service', () => {
         return await callback(mockTransaction);
       });
 
-      // Update to a past date (2020 - clearly in the past)
+      // Mock getDocs - not needed since 35000 < 40000 current
+      firestore.getDocs.mockResolvedValue({
+        docs: [],
+      });
+
+      // Update to a lower value (35000 < 40000 current)
       const newDate = new Date('2020-01-15');
-      await updateUsageHistory('usage1', 50000, newDate, null, null, 'user123');
+      const result = await updateUsageHistory('usage1', 35000, newDate, null, null, 'user123');
 
       // Transaction should update the entry
       expect(mockTransaction.update).toHaveBeenCalled();
 
-      // But current_usage should NOT be updated (past date)
+      // But current_usage should NOT be updated (lower value)
       expect(vehicles.updateVehicle).not.toHaveBeenCalled();
+
+      expect(result.conflict).toBe(false);
     });
 
     it('should throw version conflict error when expectedVersion does not match', async () => {
@@ -309,7 +343,7 @@ describe('usageHistory service', () => {
       ).rejects.toThrow('Version conflict: This entry was modified by another user. Please refresh and try again.');
     });
 
-    it('should increment version without conflict when expectedVersion is null', async () => {
+    it('should increment version and update current_usage when usage is higher', async () => {
       // Mock runTransaction with version 5 in database
       const mockTransaction = {
         get: vi.fn().mockResolvedValue({
@@ -328,9 +362,14 @@ describe('usageHistory service', () => {
         return await callback(mockTransaction);
       });
 
+      // Mock getDocs to return empty (no later conflicting entries)
+      firestore.getDocs.mockResolvedValue({
+        docs: [],
+      });
+
       const newDate = new Date('2020-01-15');
       // Not passing expectedVersion (null) - should succeed regardless of current version
-      await updateUsageHistory('usage1', 50000, newDate, null, null, 'user123');
+      const result = await updateUsageHistory('usage1', 50000, newDate, null, null, 'user123');
 
       // Should increment version from 5 to 6
       const updateCall = mockTransaction.update.mock.calls[0];
@@ -338,8 +377,12 @@ describe('usageHistory service', () => {
         version: 6,
       });
 
-      // Should NOT update current_usage (past date)
-      expect(vehicles.updateVehicle).not.toHaveBeenCalled();
+      // Should update current_usage (50000 > 40000)
+      expect(vehicles.updateVehicle).toHaveBeenCalledWith('vehicle123', {
+        current_usage: 50000,
+      });
+
+      expect(result.conflict).toBe(false);
     });
 
     it('should handle entries without version field (legacy data)', async () => {
@@ -361,8 +404,13 @@ describe('usageHistory service', () => {
         return await callback(mockTransaction);
       });
 
+      // Mock getDocs to return empty (no conflicts)
+      firestore.getDocs.mockResolvedValue({
+        docs: [],
+      });
+
       const newDate = new Date('2020-01-15');
-      await updateUsageHistory('usage1', 50000, newDate, null, null, 'user123');
+      const result = await updateUsageHistory('usage1', 50000, newDate, null, null, 'user123');
 
       // Should default to version 1 and increment to 2
       const updateCall = mockTransaction.update.mock.calls[0];
@@ -370,13 +418,17 @@ describe('usageHistory service', () => {
         version: 2, // 1 (default) + 1
       });
 
-      // Should NOT update current_usage (past date)
-      expect(vehicles.updateVehicle).not.toHaveBeenCalled();
+      // Should update current_usage (50000 > 40000)
+      expect(vehicles.updateVehicle).toHaveBeenCalledWith('vehicle123', {
+        current_usage: 50000,
+      });
+
+      expect(result.conflict).toBe(false);
     });
   });
 
   describe('deleteUsageHistory', () => {
-    it('should delete usage history without updating current_usage', async () => {
+    it('should delete usage history and recalculate current_usage from remaining entries', async () => {
       // Mock getDoc for the entry being deleted
       firestore.getDoc.mockResolvedValue({
         exists: () => true,
@@ -385,13 +437,20 @@ describe('usageHistory service', () => {
         }),
       });
 
+      // Mock getDocs to return remaining usage history entries
+      firestore.getDocs.mockResolvedValue({
+        docs: [],
+      });
+
       await deleteUsageHistory('usage1');
 
       // Check that deleteDoc was called
       expect(firestore.deleteDoc).toHaveBeenCalledTimes(1);
 
-      // current_usage should NOT be updated when deleting usage history
-      expect(vehicles.updateVehicle).not.toHaveBeenCalled();
+      // current_usage should be updated to 0 (no remaining entries)
+      expect(vehicles.updateVehicle).toHaveBeenCalledWith('vehicle123', {
+        current_usage: 0,
+      });
     });
 
     it('should throw error when usage history entry does not exist', async () => {
@@ -410,17 +469,24 @@ describe('usageHistory service', () => {
       const mockUsageRef = { id: 'usage123' };
       firestore.addDoc.mockResolvedValue(mockUsageRef);
 
-      // Use today's date
+      // Mock getDocs to return empty (no conflicts)
+      firestore.getDocs.mockResolvedValue({
+        docs: [],
+      });
+
+      // Use a value higher than current (40000) with decimal
       const date = new Date();
-      await logUsageUpdate('vehicle123', 123.5, date, null, null, 'user123');
+      const result = await logUsageUpdate('vehicle123', 45123.5, date, null, null, 'user123');
 
       const addDocCall = firestore.addDoc.mock.calls[0];
-      expect(addDocCall[1].usage).toBe(123.5);
+      expect(addDocCall[1].usage).toBe(45123.5);
 
-      // Should update current_usage (today's date)
+      // Should update current_usage (45123.5 > 40000)
       expect(vehicles.updateVehicle).toHaveBeenCalledWith('vehicle123', {
-        current_usage: 123.5,
+        current_usage: 45123.5,
       });
+
+      expect(result.conflict).toBe(false);
     });
 
     it('should handle zero usage value', async () => {

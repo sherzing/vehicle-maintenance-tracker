@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Modal, Button, Form, Alert } from 'react-bootstrap';
-import { updateUsageHistory, deleteUsageHistory } from '../../services/firebase/usageHistory';
+import { updateUsageHistory, deleteUsageHistory, resolveUsageConflict } from '../../services/firebase/usageHistory';
 import { rateLimiter } from '../../utils/rateLimiter';
 import { handleError } from '../../utils/errorHandler';
 
@@ -15,6 +15,9 @@ export default function EditUsageModal({ show, onHide, onUsageUpdated, usageEntr
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [conflictInfo, setConflictInfo] = useState(null);
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
+  const [customValue, setCustomValue] = useState('');
 
   useEffect(() => {
     if (usageEntry) {
@@ -74,15 +77,49 @@ export default function EditUsageModal({ show, onHide, onUsageUpdated, usageEntr
       const location = formData.location ? formData.location.trim() : null;
 
       // Pass version for optimistic locking to prevent race conditions
-      await updateUsageHistory(usageEntry.id, usageValue, date, usageType, location, user?.uid, usageEntry.version);
+      const result = await updateUsageHistory(usageEntry.id, usageValue, date, usageType, location, user?.uid, usageEntry.version);
 
       // Record successful operation for rate limiting
       rateLimiter.recordOperation(rateLimitKey);
 
+      // Check if there's a conflict
+      if (result.conflict) {
+        setConflictInfo(result.conflictInfo);
+        setShowConflictDialog(true);
+        setLoading(false);
+        return;
+      }
+
+      // No conflict - success
       setSuccess(true);
 
       setTimeout(() => {
         setSuccess(false);
+        onUsageUpdated();
+        onHide();
+      }, 1000);
+    } catch (err) {
+      setError(handleError(err, 'update'));
+      setLoading(false);
+    }
+  };
+
+  const handleConflictResolution = async (chosenValue) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Get vehicle ID from the usage entry
+      const vehicleId = usageEntry.vehicle_id;
+      await resolveUsageConflict(vehicleId, chosenValue);
+
+      setShowConflictDialog(false);
+      setConflictInfo(null);
+      setSuccess(true);
+
+      setTimeout(() => {
+        setSuccess(false);
+        setCustomValue('');
         onUsageUpdated();
         onHide();
       }, 1000);
@@ -128,6 +165,9 @@ export default function EditUsageModal({ show, onHide, onUsageUpdated, usageEntr
   const handleClose = () => {
     if (!loading && !success && !deleting) {
       setError(null);
+      setConflictInfo(null);
+      setShowConflictDialog(false);
+      setCustomValue('');
       onHide();
     }
   };
@@ -137,7 +177,8 @@ export default function EditUsageModal({ show, onHide, onUsageUpdated, usageEntr
   if (!usageEntry) return null;
 
   return (
-    <Modal show={show} onHide={handleClose} centered>
+    <>
+      <Modal show={show && !showConflictDialog} onHide={handleClose} centered>
       <Modal.Header closeButton>
         <Modal.Title>Edit Usage Entry</Modal.Title>
       </Modal.Header>
@@ -244,5 +285,99 @@ export default function EditUsageModal({ show, onHide, onUsageUpdated, usageEntr
         </Modal.Footer>
       </Form>
     </Modal>
+
+      {/* Conflict Resolution Dialog */}
+      <Modal show={showConflictDialog} onHide={() => setShowConflictDialog(false)} centered size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>⚠️ Usage Conflict Detected</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {error && <Alert variant="danger">{error}</Alert>}
+          {success && <Alert variant="success">Usage updated successfully!</Alert>}
+
+          <Alert variant="warning">
+            <strong>Inconsistent Usage Data Detected</strong>
+            <p className="mb-0 mt-2">
+              You're updating this usage entry to <strong>{conflictInfo?.newUsage} {usageLabel}</strong> for
+              a past date, but there are later entries with lower values. This is impossible since
+              odometer/hour meters only go up.
+            </p>
+          </Alert>
+
+          <div className="mb-3">
+            <h6>Conflict Details:</h6>
+            <ul>
+              <li>Updated entry usage: <strong>{conflictInfo?.newUsage} {usageLabel}</strong></li>
+              <li>Current vehicle usage: <strong>{conflictInfo?.currentUsage} {usageLabel}</strong></li>
+              <li>Highest later entry: <strong>{conflictInfo?.highestLaterUsage} {usageLabel}</strong></li>
+              <li>Number of conflicting later entries: <strong>{conflictInfo?.conflictingEntries?.length}</strong></li>
+            </ul>
+          </div>
+
+          <div className="mb-3">
+            <h6>Choose Current Usage Value:</h6>
+            <p className="text-muted small">
+              The usage history entry has been updated. Please select which value should be used
+              as the vehicle's current usage for maintenance calculations:
+            </p>
+
+            <div className="d-grid gap-2">
+              <Button
+                variant="outline-primary"
+                onClick={() => handleConflictResolution(conflictInfo?.newUsage)}
+                disabled={loading}
+              >
+                Use Updated Entry Value: {conflictInfo?.newUsage} {usageLabel}
+                <div className="small text-muted">This is the value you just updated</div>
+              </Button>
+
+              <Button
+                variant="outline-primary"
+                onClick={() => handleConflictResolution(conflictInfo?.highestLaterUsage)}
+                disabled={loading}
+              >
+                Use Highest Later Value: {conflictInfo?.highestLaterUsage} {usageLabel}
+                <div className="small text-muted">From a more recent entry (recommended for consistency)</div>
+              </Button>
+
+              <div>
+                <Form.Group>
+                  <Form.Label>Or enter custom value:</Form.Label>
+                  <div className="d-flex gap-2">
+                    <Form.Control
+                      type="number"
+                      placeholder="Enter custom usage"
+                      value={customValue}
+                      onChange={(e) => setCustomValue(e.target.value)}
+                      disabled={loading}
+                      step="0.1"
+                    />
+                    <Button
+                      variant="outline-primary"
+                      onClick={() => handleConflictResolution(parseFloat(customValue))}
+                      disabled={loading || !customValue || isNaN(parseFloat(customValue))}
+                    >
+                      Use Custom
+                    </Button>
+                  </div>
+                </Form.Group>
+              </div>
+            </div>
+          </div>
+
+          <Alert variant="info" className="mb-0">
+            <small>
+              <strong>Tip:</strong> Review your usage history entries to identify and correct
+              any data entry errors. You can edit or delete entries from the service history view.
+            </small>
+          </Alert>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowConflictDialog(false)} disabled={loading}>
+            Cancel
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </>
   );
 }

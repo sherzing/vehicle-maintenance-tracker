@@ -151,27 +151,69 @@ function validateUserId(userId) {
 }
 
 /**
- * Recalculate vehicle.current_usage based on all usage history
- * Finds the most recent entry by date and sets current_usage to that value
+ * Detect usage conflicts when logging a new entry
+ * A conflict occurs when the new usage is higher than current, but there are
+ * later entries with lower usage values (impossible scenario - odometer can't go backward)
  * @param {string} vehicleId - Vehicle ID
+ * @param {number} newUsage - New usage value being logged
+ * @param {Date} newDate - Date of the new entry
+ * @param {number} currentUsage - Current vehicle usage
+ * @returns {Promise<object|null>} Conflict info or null if no conflict
  * @private
  */
-async function recalculateCurrentUsage(vehicleId) {
+async function detectUsageConflict(vehicleId, newUsage, newDate, currentUsage) {
+  // Only check for conflicts if new usage is higher than current
+  if (newUsage <= currentUsage) {
+    return null;
+  }
+
   // Get all usage history for this vehicle
   const allHistory = await getVehicleUsageHistory(vehicleId);
 
-  if (allHistory.length === 0) {
-    // No history - don't update current_usage
-    // Vehicle might have been created with initial usage
-    return;
+  // Find entries with dates after the new entry's date
+  const laterEntries = allHistory.filter(entry => {
+    const entryDate = entry.date?.toDate ? entry.date.toDate() : new Date(entry.date);
+    return entryDate > newDate;
+  });
+
+  if (laterEntries.length === 0) {
+    // No later entries - no conflict
+    return null;
   }
 
-  // Most recent entry is already at index 0 (sorted by date desc)
-  const mostRecentEntry = allHistory[0];
+  // Check if any later entry has usage less than new usage
+  // This would be impossible (odometer went backward)
+  const conflictingEntries = laterEntries.filter(entry => entry.usage < newUsage);
 
-  // Update vehicle.current_usage to match most recent entry's usage
+  if (conflictingEntries.length === 0) {
+    // All later entries have higher usage - no conflict
+    return null;
+  }
+
+  // Conflict detected
+  const highestLaterUsage = Math.max(...laterEntries.map(e => e.usage));
+
+  return {
+    newUsage,
+    currentUsage,
+    highestLaterUsage,
+    laterEntries,
+    conflictingEntries,
+  };
+}
+
+/**
+ * Resolve a usage conflict by setting vehicle.current_usage to the chosen value
+ * @param {string} vehicleId - Vehicle ID
+ * @param {number} chosenUsage - The usage value chosen by the user
+ * @returns {Promise<void>}
+ */
+export async function resolveUsageConflict(vehicleId, chosenUsage) {
+  validateVehicleId(vehicleId);
+  validateUsage(chosenUsage);
+
   await updateVehicle(vehicleId, {
-    current_usage: mostRecentEntry.usage,
+    current_usage: chosenUsage,
   });
 }
 
@@ -190,14 +232,14 @@ function isToday(date) {
 
 /**
  * Log a usage update for a vehicle
- * Creates usage_history entry and updates vehicle.current_usage only if date is today
+ * Creates usage_history entry and updates vehicle.current_usage if usage is higher
  * @param {string} vehicleId - Vehicle ID
  * @param {number} usage - Usage reading (km or hours)
  * @param {Date} date - Date of the reading
  * @param {string} usageType - Optional usage type (e.g., "track day")
  * @param {string} location - Optional location
  * @param {string} userId - User ID who created this entry
- * @returns {Promise<string>} Usage history entry ID
+ * @returns {Promise<object>} Result with entryId and optional conflict info
  */
 export async function logUsageUpdate(vehicleId, usage, date, usageType = null, location = null, userId) {
   // Validate all inputs
@@ -222,17 +264,39 @@ export async function logUsageUpdate(vehicleId, usage, date, usageType = null, l
     version: 1,
   };
 
+  // Create the usage history entry
   const usageRef = await addDoc(collection(db, 'usage_history'), usageEntry);
 
-  // Only update current_usage if the logged date is today
-  // Past usage entries are just historical records and don't affect current_usage
-  if (isToday(date)) {
+  // Get current vehicle data
+  const { getVehicle } = await import('./vehicles');
+  const vehicle = await getVehicle(vehicleId);
+  const currentUsage = vehicle?.current_usage || 0;
+
+  // Check if we should update current_usage (only if new usage is higher)
+  if (usage > currentUsage) {
+    // Detect potential conflicts with later entries
+    const conflict = await detectUsageConflict(vehicleId, usage, date, currentUsage);
+
+    if (conflict) {
+      // Conflict detected - return info for UI to show dialog
+      return {
+        entryId: usageRef.id,
+        conflict: true,
+        conflictInfo: conflict,
+      };
+    }
+
+    // No conflict - update current_usage
     await updateVehicle(vehicleId, {
       current_usage: usage,
     });
   }
 
-  return usageRef.id;
+  // Successfully logged without conflict
+  return {
+    entryId: usageRef.id,
+    conflict: false,
+  };
 }
 
 /**
@@ -264,7 +328,7 @@ export async function getVehicleUsageHistory(vehicleId) {
 }
 
 /**
- * Update a usage history entry and update vehicle.current_usage if date is today
+ * Update a usage history entry and update vehicle.current_usage if usage is higher
  * Uses optimistic locking with version field to prevent race conditions
  * @param {string} historyId - Usage history entry ID
  * @param {number} usage - Updated usage value
@@ -273,6 +337,7 @@ export async function getVehicleUsageHistory(vehicleId) {
  * @param {string} location - Optional location
  * @param {string} userId - User ID who is updating this entry
  * @param {number} expectedVersion - Optional expected version for optimistic locking
+ * @returns {Promise<object>} Result with optional conflict info
  * @throws {Error} If version conflict detected (concurrent modification)
  */
 export async function updateUsageHistory(historyId, usage, date, usageType = null, location = null, userId, expectedVersion = null) {
@@ -320,19 +385,39 @@ export async function updateUsageHistory(historyId, usage, date, usageType = nul
     return vehicleId;
   });
 
-  // Only update current_usage if the updated date is today
-  // Past usage entries don't affect current_usage
-  if (isToday(date)) {
+  // Get current vehicle data
+  const { getVehicle } = await import('./vehicles');
+  const vehicle = await getVehicle(vehicleId);
+  const currentUsage = vehicle?.current_usage || 0;
+
+  // Check if we should update current_usage (only if new usage is higher)
+  if (usage > currentUsage) {
+    // Detect potential conflicts with later entries
+    const conflict = await detectUsageConflict(vehicleId, usage, date, currentUsage);
+
+    if (conflict) {
+      // Conflict detected - return info for UI to show dialog
+      return {
+        conflict: true,
+        conflictInfo: conflict,
+      };
+    }
+
+    // No conflict - update current_usage
     await updateVehicle(vehicleId, {
       current_usage: usage,
     });
   }
+
+  // Successfully updated without conflict
+  return {
+    conflict: false,
+  };
 }
 
 /**
- * Delete a usage history entry
- * Note: This does NOT update vehicle.current_usage. The user should manually
- * log a new usage entry if they want to update current_usage.
+ * Delete a usage history entry and recalculate vehicle.current_usage
+ * Sets current_usage to the highest value from remaining entries
  * @param {string} historyId - Usage history entry ID
  */
 export async function deleteUsageHistory(historyId) {
@@ -356,6 +441,21 @@ export async function deleteUsageHistory(historyId) {
   // Delete the usage history entry
   await deleteDoc(historyRef);
 
-  // Note: We don't update current_usage when deleting usage history.
-  // Current usage remains unchanged and can be manually updated by the user.
+  // Recalculate current_usage from remaining entries
+  const remainingEntries = await getVehicleUsageHistory(vehicleId);
+
+  if (remainingEntries.length > 0) {
+    // Find the highest usage value among remaining entries
+    const highestUsage = Math.max(...remainingEntries.map(e => e.usage));
+
+    // Update vehicle.current_usage to the highest value
+    await updateVehicle(vehicleId, {
+      current_usage: highestUsage,
+    });
+  } else {
+    // No remaining entries - reset to 0
+    await updateVehicle(vehicleId, {
+      current_usage: 0,
+    });
+  }
 }
