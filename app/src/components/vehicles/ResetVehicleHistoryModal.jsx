@@ -4,6 +4,7 @@ import { resetVehicleHistory } from '../../services/firebase/resetVehicleHistory
 
 export default function ResetVehicleHistoryModal({ show, onHide, onComplete, vehicle }) {
   const [confirmationText, setConfirmationText] = useState('');
+  const [keepMaintenanceItems, setKeepMaintenanceItems] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -12,6 +13,7 @@ export default function ResetVehicleHistoryModal({ show, onHide, onComplete, veh
   useEffect(() => {
     if (!show) {
       setConfirmationText('');
+      setKeepMaintenanceItems(true);
       setError(null);
       setSuccess(null);
     }
@@ -27,12 +29,13 @@ export default function ResetVehicleHistoryModal({ show, onHide, onComplete, veh
     setSuccess(null);
 
     try {
-      const result = await resetVehicleHistory(vehicle.id);
+      const result = await resetVehicleHistory(vehicle.id, { keepMaintenanceItems });
 
-      setSuccess(
-        `Successfully reset vehicle history! Deleted ${result.serviceHistoryDeleted} service records, ` +
-        `${result.usageHistoryDeleted} usage records, and reset ${result.maintenanceItemsReset} maintenance items.`
-      );
+      let successMessage = `Successfully reset vehicle history! Deleted ${result.serviceHistoryDeleted} service records and ${result.usageHistoryDeleted} usage records.`;
+      if (keepMaintenanceItems && result.maintenanceItemsReset > 0) {
+        successMessage += ` Reset ${result.maintenanceItemsReset} maintenance items to "never serviced".`;
+      }
+      setSuccess(successMessage);
 
       // Call onComplete to refresh vehicle data
       onComplete();
@@ -87,7 +90,9 @@ export default function ResetVehicleHistoryModal({ show, onHide, onComplete, veh
                 <li>Vehicle current usage will be set to 0</li>
                 <li>All service history records will be deleted</li>
                 <li>All usage history records will be deleted</li>
-                <li>All maintenance items will be marked as &quot;never serviced&quot;</li>
+                {keepMaintenanceItems && (
+                  <li>All maintenance items will be marked as &quot;never serviced&quot;</li>
+                )}
               </ul>
             </div>
 
@@ -95,10 +100,28 @@ export default function ResetVehicleHistoryModal({ show, onHide, onComplete, veh
               <h6>What will be preserved:</h6>
               <ul>
                 <li>Vehicle details (make, model, year, etc.)</li>
-                <li>Maintenance intervals will be preserved</li>
+                {keepMaintenanceItems && (
+                  <li>Maintenance intervals/schedules (but reset to &quot;never serviced&quot;)</li>
+                )}
                 <li>Team membership and permissions</li>
               </ul>
             </div>
+
+            <Form.Group className="mb-3">
+              <Form.Check
+                type="checkbox"
+                id="keep-maintenance-items-check"
+                label="Keep maintenance schedules (reset to 'never serviced')"
+                checked={keepMaintenanceItems}
+                onChange={(e) => setKeepMaintenanceItems(e.target.checked)}
+                disabled={loading}
+              />
+              <Form.Text className="text-muted">
+                {keepMaintenanceItems
+                  ? 'Maintenance intervals will be preserved but marked as never serviced, giving you a fresh start while keeping your schedules.'
+                  : 'All maintenance items and schedules will be permanently deleted along with the history.'}
+              </Form.Text>
+            </Form.Group>
 
             <Form.Group className="mb-3">
               <Form.Label htmlFor="confirmation-input">

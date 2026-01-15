@@ -68,7 +68,7 @@ describe('ResetVehicleHistoryModal', () => {
     it('should display what will be preserved', () => {
       renderModal();
 
-      expect(screen.getByText(/maintenance intervals will be preserved/i)).toBeInTheDocument();
+      expect(screen.getByText(/maintenance intervals\/schedules.*but reset to.*never serviced/i)).toBeInTheDocument();
     });
 
     it('should display vehicle name in explanation', () => {
@@ -159,7 +159,7 @@ describe('ResetVehicleHistoryModal', () => {
       fireEvent.click(confirmButton);
 
       await waitFor(() => {
-        expect(resetVehicleHistory.resetVehicleHistory).toHaveBeenCalledWith('vehicle123');
+        expect(resetVehicleHistory.resetVehicleHistory).toHaveBeenCalledWith('vehicle123', { keepMaintenanceItems: true });
       });
     });
 
@@ -240,7 +240,8 @@ describe('ResetVehicleHistoryModal', () => {
       fireEvent.click(confirmButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/10.*service.*5.*usage.*3.*maintenance/i)).toBeInTheDocument();
+        expect(screen.getByText(/10.*service.*5.*usage/i)).toBeInTheDocument();
+        expect(screen.getByText(/3.*maintenance.*never serviced/i)).toBeInTheDocument();
       });
     });
 
@@ -462,6 +463,120 @@ describe('ResetVehicleHistoryModal', () => {
 
       const permanentTexts = screen.getAllByText(/cannot be undone|permanent/i);
       expect(permanentTexts.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Keep Maintenance Items Checkbox', () => {
+    it('should display checkbox for keeping maintenance schedules', () => {
+      renderModal();
+
+      const checkbox = screen.getByLabelText(/keep maintenance schedules/i);
+      expect(checkbox).toBeInTheDocument();
+    });
+
+    it('should have checkbox checked by default', () => {
+      renderModal();
+
+      const checkbox = screen.getByLabelText(/keep maintenance schedules/i);
+      expect(checkbox).toBeChecked();
+    });
+
+    it('should allow unchecking the checkbox', () => {
+      renderModal();
+
+      const checkbox = screen.getByLabelText(/keep maintenance schedules/i);
+      fireEvent.click(checkbox);
+
+      expect(checkbox).not.toBeChecked();
+    });
+
+    it('should call resetVehicleHistory with keepMaintenanceItems false when unchecked', async () => {
+      resetVehicleHistory.resetVehicleHistory.mockResolvedValue({
+        success: true,
+        serviceHistoryDeleted: 10,
+        usageHistoryDeleted: 5,
+        maintenanceItemsReset: 0,
+      });
+
+      renderModal();
+
+      const checkbox = screen.getByLabelText(/keep maintenance schedules/i);
+      fireEvent.click(checkbox);
+
+      const input = screen.getByPlaceholderText(/type vehicle name/i);
+      fireEvent.change(input, { target: { value: 'Test Vehicle' } });
+
+      const confirmButton = screen.getByRole('button', { name: /reset history/i });
+      fireEvent.click(confirmButton);
+
+      await waitFor(() => {
+        expect(resetVehicleHistory.resetVehicleHistory).toHaveBeenCalledWith('vehicle123', { keepMaintenanceItems: false });
+      });
+    });
+
+    it('should update help text when checkbox is unchecked', () => {
+      renderModal();
+
+      const checkbox = screen.getByLabelText(/keep maintenance schedules/i);
+      fireEvent.click(checkbox);
+
+      expect(screen.getByText(/all maintenance items and schedules will be permanently deleted/i)).toBeInTheDocument();
+    });
+
+    it('should update help text when checkbox is checked', () => {
+      renderModal();
+
+      expect(screen.getByText(/maintenance intervals will be preserved but marked as never serviced/i)).toBeInTheDocument();
+    });
+
+    it('should hide maintenance items from reset list when checkbox is unchecked', () => {
+      renderModal();
+
+      const checkbox = screen.getByLabelText(/keep maintenance schedules/i);
+      fireEvent.click(checkbox);
+
+      expect(screen.queryByText(/all maintenance items will be marked as.*never serviced/i)).not.toBeInTheDocument();
+    });
+
+    it('should hide maintenance schedules from preserved list when checkbox is unchecked', () => {
+      renderModal();
+
+      const checkbox = screen.getByLabelText(/keep maintenance schedules/i);
+      fireEvent.click(checkbox);
+
+      expect(screen.queryByText(/maintenance intervals\/schedules/i)).not.toBeInTheDocument();
+    });
+
+    it('should reset checkbox state when modal is closed and reopened', () => {
+      const { rerender } = renderModal();
+
+      const checkbox = screen.getByLabelText(/keep maintenance schedules/i);
+      fireEvent.click(checkbox);
+
+      expect(checkbox).not.toBeChecked();
+
+      // Close modal
+      rerender(
+        <ResetVehicleHistoryModal
+          show={false}
+          onHide={mockOnHide}
+          onComplete={mockOnComplete}
+          vehicle={mockVehicle}
+        />
+      );
+
+      // Reopen modal
+      rerender(
+        <ResetVehicleHistoryModal
+          show={true}
+          onHide={mockOnHide}
+          onComplete={mockOnComplete}
+          vehicle={mockVehicle}
+        />
+      );
+
+      const newCheckbox = screen.getByLabelText(/keep maintenance schedules/i);
+      expect(newCheckbox).toBeChecked();
     });
   });
 });

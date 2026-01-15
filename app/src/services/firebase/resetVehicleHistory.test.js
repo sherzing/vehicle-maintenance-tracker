@@ -341,4 +341,122 @@ describe('resetVehicleHistory', () => {
       maintenanceItemsReset: 3,
     });
   });
+
+  describe('Keep Maintenance Items Option', () => {
+    it('should keep and reset maintenance items by default', async () => {
+      const mockMaintenanceItems = [
+        {
+          id: 'item1',
+          ref: 'item1-ref',
+          data: () => ({
+            name: 'Oil Change',
+            primary_interval: 5000,
+            last_serviced_date: { toDate: () => new Date() },
+            last_serviced_usage: 50000,
+          }),
+        },
+      ];
+
+      let queryCallCount = 0;
+      firestore.getDocs.mockImplementation(() => {
+        queryCallCount++;
+        if (queryCallCount === 1 || queryCallCount === 2) {
+          // Service and usage history queries
+          return Promise.resolve({ docs: [], empty: true });
+        } else if (queryCallCount === 3) {
+          // Maintenance items query
+          return Promise.resolve({ docs: mockMaintenanceItems, empty: false });
+        }
+        return Promise.resolve({ docs: [], empty: true });
+      });
+
+      firestore.updateDoc.mockResolvedValue();
+      firestore.doc.mockReturnValue('vehicle-ref');
+      firestore.collection.mockReturnValue('collection');
+      firestore.query.mockReturnValue('query');
+
+      const options = { keepMaintenanceItems: true };
+      const result = await resetVehicleHistory('vehicle123', options);
+
+      // Should reset last_serviced fields to null
+      expect(firestore.updateDoc).toHaveBeenCalledWith(
+        'item1-ref',
+        expect.objectContaining({
+          last_serviced_date: null,
+          last_serviced_usage: null,
+        })
+      );
+
+      expect(result.maintenanceItemsReset).toBe(1);
+    });
+
+    it('should delete service and usage history even when keeping maintenance items', async () => {
+      const mockServiceHistory = [{ id: 'service1', ref: 'service1-ref' }];
+      const mockUsageHistory = [{ id: 'usage1', ref: 'usage1-ref' }];
+
+      let queryCallCount = 0;
+      firestore.getDocs.mockImplementation(() => {
+        queryCallCount++;
+        if (queryCallCount === 1) {
+          return Promise.resolve({ docs: mockServiceHistory, empty: false });
+        } else if (queryCallCount === 2) {
+          return Promise.resolve({ docs: mockUsageHistory, empty: false });
+        } else if (queryCallCount === 3) {
+          return Promise.resolve({ docs: [], empty: true });
+        }
+        return Promise.resolve({ docs: [], empty: true });
+      });
+
+      firestore.deleteDoc.mockResolvedValue();
+      firestore.updateDoc.mockResolvedValue();
+      firestore.doc.mockReturnValue('vehicle-ref');
+      firestore.collection.mockReturnValue('collection');
+      firestore.query.mockReturnValue('query');
+
+      const options = { keepMaintenanceItems: true };
+      const result = await resetVehicleHistory('vehicle123', options);
+
+      expect(result.serviceHistoryDeleted).toBe(1);
+      expect(result.usageHistoryDeleted).toBe(1);
+      expect(firestore.deleteDoc).toHaveBeenCalledTimes(2);
+    });
+
+    it('should work with default options (keepMaintenanceItems undefined)', async () => {
+      const mockMaintenanceItems = [
+        {
+          id: 'item1',
+          ref: 'item1-ref',
+          data: () => ({ name: 'Oil Change' }),
+        },
+      ];
+
+      let queryCallCount = 0;
+      firestore.getDocs.mockImplementation(() => {
+        queryCallCount++;
+        if (queryCallCount === 1 || queryCallCount === 2) {
+          return Promise.resolve({ docs: [], empty: true });
+        } else if (queryCallCount === 3) {
+          return Promise.resolve({ docs: mockMaintenanceItems, empty: false });
+        }
+        return Promise.resolve({ docs: [], empty: true });
+      });
+
+      firestore.updateDoc.mockResolvedValue();
+      firestore.doc.mockReturnValue('vehicle-ref');
+      firestore.collection.mockReturnValue('collection');
+      firestore.query.mockReturnValue('query');
+
+      // Call without options - should behave the same (reset maintenance items)
+      const result = await resetVehicleHistory('vehicle123');
+
+      expect(result.maintenanceItemsReset).toBe(1);
+      expect(firestore.updateDoc).toHaveBeenCalledWith(
+        'item1-ref',
+        expect.objectContaining({
+          last_serviced_date: null,
+          last_serviced_usage: null,
+        })
+      );
+    });
+  });
 });
