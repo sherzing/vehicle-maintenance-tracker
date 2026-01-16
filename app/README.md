@@ -9,12 +9,90 @@ A React-based web application for tracking vehicle maintenance intervals across 
 npm install
 ```
 
-### 2. Configure Firebase
-1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com)
-2. Enable Authentication (Google Sign-In provider)
-3. Create a Firestore database
-4. Copy `.env.example` to `.env`
-5. Fill in your Firebase credentials in `.env`
+### 2. Configure Firebase Environment
+
+This project supports multiple Firebase environments (development and production). Follow this checklist to set up a new environment:
+
+#### Firebase Project Setup Checklist
+
+- [ ] **Create Firebase Project**
+  - Go to [Firebase Console](https://console.firebase.google.com)
+  - Click "Add project"
+  - Enter project name (e.g., `maintainer-dev` or `maintainer-prod`)
+  - Complete project creation wizard
+
+- [ ] **Enable Firebase Authentication**
+  - Navigate to: `Authentication` → `Get started`
+  - Click on `Sign-in method` tab
+  - Enable `Google` provider:
+    - Toggle "Enable" to ON
+    - Enter support email (your email address)
+    - Click "Save"
+  - Go to `Settings` tab → `Authorized domains`
+  - Verify these domains are listed:
+    - `localhost` (for local development)
+    - `your-project-id.web.app` (Firebase hosting domain)
+    - `your-project-id.firebaseapp.com` (Firebase app domain)
+
+- [ ] **Create Firestore Database**
+  - Navigate to: `Firestore Database` → `Create database`
+  - Select location: `me-central1` (Middle East) or your preferred region
+  - Start in `production mode` (rules will be deployed separately)
+  - Click "Enable"
+
+- [ ] **Create Web App**
+  - Go to Project Settings (gear icon) → `General` tab
+  - Scroll to "Your apps" section
+  - Click "Add app" → Select web (`</>` icon)
+  - Enter app nickname (e.g., "Vehicle Maintenance Tracker")
+  - Register app
+  - Copy the Firebase configuration values
+
+- [ ] **Configure Environment File**
+  - Copy the appropriate template:
+    - For development: `cp .env.development.example .env.development`
+    - For production: `cp .env.production.example .env.production`
+  - Fill in Firebase credentials from the web app configuration:
+    ```env
+    VITE_FIREBASE_API_KEY=your_api_key
+    VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+    VITE_FIREBASE_PROJECT_ID=your-project-id
+    VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+    VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+    VITE_FIREBASE_APP_ID=your_app_id
+    ```
+
+- [ ] **Update Firebase Project Aliases** (for deployment)
+  - Edit `.firebaserc` to add your project:
+    ```json
+    {
+      "projects": {
+        "default": "maintainer-dev",
+        "dev": "maintainer-dev",
+        "prod": "your-prod-project-id"
+      }
+    }
+    ```
+
+- [ ] **Deploy Firestore Security Rules**
+  - For development: `npm run deploy:dev:rules`
+  - For production: `npm run deploy:prod:rules`
+
+- [ ] **Test the Setup**
+  - Run development server: `npm run dev`
+  - Open browser to `http://localhost:5173`
+  - Try signing in with Google
+  - Verify no authentication errors
+
+#### Current Configured Environments
+
+- **Development**: `maintainer-dev`
+  - URL: https://maintainer-dev.web.app
+  - Project alias: `dev`, `default`
+
+- **Production**: `maintainer-85295`
+  - URL: https://maintainer-85295.web.app
+  - Project alias: `prod`
 
 ### 3. Run Development Server
 ```bash
