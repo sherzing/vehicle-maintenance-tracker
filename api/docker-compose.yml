@@ -1,0 +1,28 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      DB_DRIVER: mongo
+      MONGO_URI: mongodb://mongo:27017/vmt
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-maintainer-dev}
+      LOG_LEVEL: debug
+      RATE_LIMIT_RPM: "120"
+      CORS_ORIGINS: "*"
+    depends_on:
+      mongo:
+        condition: service_started
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
