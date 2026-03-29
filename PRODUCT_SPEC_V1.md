@@ -125,7 +125,7 @@ All authorization is enforced at the Firestore security rules level:
 | Field | Type | Required | Description |
 |-------|------|:---:|-------------|
 | `name` | string | Yes | Display name |
-| `type` | enum | Yes | `'car'` or `'motorcycle'` |
+| `type` | enum | Yes | `'car'`, `'motorcycle'`, `'bicycle'`, or `'other'` |
 | `usage_unit` | enum | Yes | `'km'` or `'hours'` (cars must use `'km'`) |
 | `current_usage` | number | Yes | Current odometer/hour meter reading (default: 0) |
 | `team_id` | string | Yes | Foreign key to team |
@@ -429,7 +429,69 @@ Built on Bootstrap 5 via React Bootstrap with custom minimalist overrides:
 
 ---
 
-## 8. Security
+## 8. Utility Modules
+
+### 8.1 VIN Decoder (`utils/vinDecoder.js`)
+
+Integrates with the **NHTSA Vehicle API** (`vpic.nhtsa.dot.gov`) to auto-populate vehicle details from a VIN.
+
+- `decodeVIN(vin)` — Calls the NHTSA DecodeVin endpoint; returns make, model, year, type, body class, manufacturer, engine details, fuel type.
+- `isValidVINFormat(vin)` — Validates 17-character format; rejects I, O, Q characters.
+- `mapVehicleType(nhtsaType)` — Maps NHTSA vehicle types to app types: passenger/sedan/coupe → `'car'`, motorcycle/moped → `'motorcycle'`, truck/SUV/van → `'car'`, otherwise → `'other'`.
+
+### 8.2 Input Sanitization (`utils/sanitize.js`)
+
+Uses **DOMPurify** for XSS prevention:
+
+- `sanitizeText(text)` — Strips all HTML tags, returns plain text only.
+- `sanitizeHTML(html)` — Allows safe formatting tags (`b`, `i`, `em`, `strong`, `a`, `p`, `br`, `ul`, `ol`, `li`) with restricted attributes.
+
+### 8.3 Client-Side Rate Limiter (`utils/rateLimiter.js`)
+
+Singleton `RateLimiter` class for UI-level protection against rapid repeated operations:
+
+- Configurable minimum interval between operations (default: 1,000 ms).
+- Configurable maximum operations per 60-second window (default: 10).
+- `useRateLimit(operationKey, options)` — React hook returning `checkLimit()`, `recordOperation()`, `clear()`.
+
+**Note:** This is client-side only. The spec notes that production should add server-side rate limiting via Firebase App Check and Cloud Functions.
+
+### 8.4 Error Handler (`utils/errorHandler.js`)
+
+Prevents information disclosure by mapping internal errors to user-friendly messages:
+
+- Maps Firebase Auth error codes (e.g., `auth/too-many-requests`) to safe messages.
+- Maps Firestore error codes (e.g., `permission-denied`, `not-found`) to safe messages.
+- Maps custom validation errors to appropriate messages.
+- Falls back to generic context-aware messages (`"Unable to create resource. Please try again."`).
+- `logError(error, context)` — Logs full details in development; minimal info in production.
+- `handleError(error, context)` — Combined log + sanitize convenience function.
+
+### 8.5 Calculations (`utils/calculations.js`)
+
+Original calculation module with simpler 10% threshold logic:
+
+- `calculateRemainingUsage(lastServicedUsage, interval, currentUsage)` — Returns remaining usage; -1 if never serviced.
+- `calculateRemainingTime(lastServicedDate, intervalMonths, currentDate)` — Returns remaining months; -1 if never serviced.
+- `getServiceStatus(remaining, interval)` — Returns `'overdue'` / `'warning'` / `'good'` using flat 10% threshold.
+- `getMaintenanceItemStatus(item, currentUsage, currentDate)` — Combines both intervals; worst status wins.
+- `getStatusColor(status)` — Maps to Bootstrap variants (`danger`, `warning`, `success`).
+
+**Note:** The dashboard and vehicle detail views use the more advanced `maintenanceStatus.js` module (Section 5.1) with dynamic thresholds. This module appears to be the original implementation retained for backward compatibility.
+
+### 8.6 Vehicle Stats (`utils/vehicleStats.js`)
+
+Display-oriented utility functions:
+
+- `calculateDaysInService(createdAt)` — Days since vehicle creation.
+- `formatDate(timestamp)` — Formats as "Jan 2024".
+- `formatTimelineDate(timestamp)` — Returns `{ day, monthYear }` for service history timeline.
+- `calculateTotalCost(serviceHistory, months)` — Sums costs from service entries within the last N months.
+- `calculateNextServiceDue(maintenanceItems, currentUsage, usageUnit)` — Finds the maintenance item with the highest percentage consumed; returns name and remaining distance/time.
+
+---
+
+## 9. Security
 
 ### 8.1 Client-Side
 
@@ -450,16 +512,16 @@ Built on Bootstrap 5 via React Bootstrap with custom minimalist overrides:
 
 ---
 
-## 9. Deployment
+## 10. Deployment
 
-### 9.1 Environments
+### 10.1 Environments
 
 | Environment | Firebase Project | Build Command |
 |-------------|-----------------|---------------|
 | Development | `-P dev` | `npm run build:dev` |
 | Production | `-P prod` | `npm run build:prod` |
 
-### 9.2 Deployment Commands
+### 10.2 Deployment Commands
 
 ```bash
 # Dev: run tests, build, deploy hosting only
@@ -476,7 +538,7 @@ npm run deploy:dev:rules
 npm run deploy:prod:rules
 ```
 
-### 9.3 Testing
+### 10.3 Testing
 
 | Type | Tool | Command |
 |------|------|---------|
@@ -485,7 +547,7 @@ npm run deploy:prod:rules
 | All | Combined | `npm run test:all` |
 | Coverage | Vitest | `npm run test:coverage` |
 
-### 9.4 Development Utilities
+### 10.4 Development Utilities
 
 - **Firebase emulators:** `npm run emulators`
 - **Database reset (dev):** `npm run reset-db-dev`
@@ -493,7 +555,7 @@ npm run deploy:prod:rules
 
 ---
 
-## 10. Known Constraints & Limitations
+## 11. Known Constraints & Limitations
 
 1. **No push notifications.** Users must open the app to check status.
 2. **No image uploads.** Text notes only for service records.
@@ -503,12 +565,12 @@ npm run deploy:prod:rules
 6. **No vehicle archival.** Vehicles are deleted, not archived.
 7. **Client-side sorting.** Queries avoid composite indexes where possible by sorting in the client.
 8. **Race number is not unique.** Multiple vehicles may share the same race number.
-9. **Cars must use `km`.** Only motorcycles can choose between `km` and `hours`.
+9. **Cars must use `km`.** Motorcycles, bicycles, and other types can choose between `km` and `hours`.
 10. **No offline support.** Requires network connectivity for all operations.
 
 ---
 
-## 11. Data Validation Rules Summary
+## 12. Data Validation Rules Summary
 
 | Field | Rule |
 |-------|------|
@@ -517,14 +579,14 @@ npm run deploy:prod:rules
 | Text fields (usage_type, location, provider) | String or null, ≤ 500 characters, trimmed |
 | Vehicle ID / History ID | Non-empty string, ≤ 1,500 chars, no `/` or `..` |
 | User ID | Non-empty string, ≤ 128 chars |
-| Vehicle type | `'car'` or `'motorcycle'` |
+| Vehicle type | `'car'`, `'motorcycle'`, `'bicycle'`, or `'other'` |
 | Vehicle unit | `'km'` or `'hours'`; `'car'` type enforces `'km'` |
 | Service history type | `'service'` or `'repair'` |
 | Usage history version | Integer, ≥ 1, < 1,000,000; must increment by 1 on update |
 
 ---
 
-## 12. Future Considerations (Out of Scope)
+## 13. Future Considerations (Out of Scope)
 
 These items are referenced in the codebase or PRD as future work:
 
