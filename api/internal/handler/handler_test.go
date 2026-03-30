@@ -10,7 +10,7 @@ import (
 )
 
 func TestHealthEndpoint(t *testing.T) {
-	h := handler.New(nil, nil) // Health doesn't need repos or verifier
+	h := handler.New(nil, nil) // Health doesn't need repos or auth
 
 	r := chi.NewRouter()
 	h.RegisterRoutes(r)

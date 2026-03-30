@@ -33,6 +33,22 @@ func Auth(verifier *auth.Verifier) func(http.Handler) http.Handler {
 	}
 }
 
+// DevAuth returns middleware that skips JWT verification and injects a
+// fixed dev user. Only use for local development.
+func DevAuth(userID string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			claims := &auth.Claims{
+				UID:   userID,
+				Email: userID + "@dev.local",
+				Name:  "Dev User",
+			}
+			ctx := context.WithValue(r.Context(), UserClaimsKey, claims)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
 // GetClaims extracts user claims from the request context.
 func GetClaims(ctx context.Context) *auth.Claims {
 	claims, _ := ctx.Value(UserClaimsKey).(*auth.Claims)

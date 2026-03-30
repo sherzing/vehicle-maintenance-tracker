@@ -34,18 +34,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	slog.Info("config loaded", "port", cfg.Port, "db_driver", cfg.DBDriver)
+	slog.Info("config loaded", "port", cfg.Port, "db_driver", cfg.DBDriver, "auth_disabled", cfg.AuthDisabled)
 
 	ctx := context.Background()
 
-	// Initialize Firebase Auth verifier (key fetch is best-effort at startup)
-	slog.Info("initializing firebase auth verifier", "project", cfg.FirebaseProjectID)
-	verifier, err := auth.NewVerifier(ctx, cfg.FirebaseProjectID)
-	if err != nil {
-		slog.Error("failed to initialize firebase auth", "error", err)
-		os.Exit(1)
+	// Initialize auth middleware
+	var authMW func(http.Handler) http.Handler
+	if cfg.AuthDisabled {
+		slog.Warn("AUTH DISABLED — using dev user", "user_id", cfg.DevUserID)
+		authMW = middleware.DevAuth(cfg.DevUserID)
+	} else {
+		slog.Info("initializing firebase auth verifier", "project", cfg.FirebaseProjectID)
+		verifier, err := auth.NewVerifier(ctx, cfg.FirebaseProjectID)
+		if err != nil {
+			slog.Error("failed to initialize firebase auth", "error", err)
+			os.Exit(1)
+		}
+		slog.Info("firebase auth verifier ready")
+		authMW = middleware.Auth(verifier)
 	}
-	slog.Info("firebase auth verifier ready")
 
 	// Initialize repositories based on DB_DRIVER
 	switch cfg.DBDriver {
@@ -57,8 +64,7 @@ func main() {
 			os.Exit(1)
 		}
 		slog.Info("mongodb connected")
-
-		startServer(cfg, logger, handler.New(repos, verifier))
+		startServer(cfg, logger, handler.New(repos, authMW))
 
 	case "s3":
 		slog.Info("initializing s3 storage backend", "bucket", cfg.S3Bucket, "prefix", cfg.S3Prefix)
@@ -74,12 +80,11 @@ func main() {
 		s3Client := s3.NewFromConfig(awsCfg)
 		repos := s3Repo.NewRepositories(s3Client, cfg.S3Bucket, cfg.S3Prefix)
 		slog.Info("s3 storage backend ready")
-		startServer(cfg, logger, handler.New(repos, verifier))
+		startServer(cfg, logger, handler.New(repos, authMW))
 
 	default:
 		slog.Error("unsupported DB_DRIVER", "driver", cfg.DBDriver)
 		slog.Info("supported drivers: mongo, s3")
-		slog.Info("coming soon: firestore, dynamo")
 		os.Exit(1)
 	}
 }

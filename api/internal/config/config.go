@@ -11,6 +11,8 @@ type Config struct {
 	DBDriver          string
 	MongoURI          string
 	FirebaseProjectID string
+	AuthDisabled      bool   // When true, injects a dev user and skips JWT verification
+	DevUserID         string // User ID to inject when auth is disabled
 	LogLevel          string
 	RateLimitRPM      int
 	CORSOrigins       string
@@ -30,6 +32,8 @@ func Load() (*Config, error) {
 		DBDriver:          getEnv("DB_DRIVER", "mongo"),
 		MongoURI:          getEnv("MONGO_URI", "mongodb://localhost:27017/vmt"),
 		FirebaseProjectID: getEnv("FIREBASE_PROJECT_ID", ""),
+		AuthDisabled:      getEnv("AUTH_DISABLED", "") == "true",
+		DevUserID:         getEnv("DEV_USER_ID", "dev-user-1"),
 		LogLevel:          getEnv("LOG_LEVEL", "info"),
 		RateLimitRPM:      getEnvInt("RATE_LIMIT_RPM", 60),
 		CORSOrigins:       getEnv("CORS_ORIGINS", "*"),
@@ -39,8 +43,8 @@ func Load() (*Config, error) {
 		S3Prefix:          getEnv("S3_PREFIX", "vmt/"),
 	}
 
-	if cfg.FirebaseProjectID == "" {
-		return nil, fmt.Errorf("FIREBASE_PROJECT_ID is required")
+	if cfg.FirebaseProjectID == "" && !cfg.AuthDisabled {
+		return nil, fmt.Errorf("FIREBASE_PROJECT_ID is required (set AUTH_DISABLED=true for local dev)")
 	}
 
 	return cfg, nil

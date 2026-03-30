@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/sherzing/vehicle-maintenance-tracker/api/internal/auth"
 	"github.com/sherzing/vehicle-maintenance-tracker/api/internal/middleware"
 	"github.com/sherzing/vehicle-maintenance-tracker/api/internal/model"
 	"github.com/sherzing/vehicle-maintenance-tracker/api/internal/repository"
@@ -14,15 +13,15 @@ import (
 
 // Handler holds dependencies for all HTTP handlers.
 type Handler struct {
-	repos    *repository.Repositories
-	verifier *auth.Verifier
+	repos      *repository.Repositories
+	authMiddleware func(http.Handler) http.Handler
 }
 
 // New creates a new Handler with the given dependencies.
-func New(repos *repository.Repositories, verifier *auth.Verifier) *Handler {
+func New(repos *repository.Repositories, authMiddleware func(http.Handler) http.Handler) *Handler {
 	return &Handler{
-		repos:    repos,
-		verifier: verifier,
+		repos:          repos,
+		authMiddleware: authMiddleware,
 	}
 }
 
@@ -31,7 +30,9 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Get("/health", h.Health)
 
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Use(middleware.Auth(h.verifier))
+		if h.authMiddleware != nil {
+			r.Use(h.authMiddleware)
+		}
 
 		// Teams
 		r.Post("/teams", h.CreateTeam)
