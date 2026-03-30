@@ -24,6 +24,9 @@ type Config struct {
 	// S3 storage backend
 	S3Bucket string
 	S3Prefix string
+
+	// Firestore storage backend
+	FirestoreToken string // OAuth2 access token (or empty for ADC)
 }
 
 func Load() (*Config, error) {
@@ -41,6 +44,7 @@ func Load() (*Config, error) {
 		DynamoTablePrefix: getEnv("DYNAMO_TABLE_PREFIX", "vmt_"),
 		S3Bucket:          getEnv("S3_BUCKET", ""),
 		S3Prefix:          getEnv("S3_PREFIX", "vmt/"),
+		FirestoreToken:    getEnv("FIRESTORE_TOKEN", ""),
 	}
 
 	if cfg.FirebaseProjectID == "" && !cfg.AuthDisabled {

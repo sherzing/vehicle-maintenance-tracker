@@ -53,6 +53,15 @@ All requests run as `dev-user-1` when auth is disabled. No Google/Firebase crede
 
 The S3 backend stores each collection as a JSON file in S3. Designed for Lambda deployments where the mobile app caches locally and syncs in the background.
 
+### Firestore Backend (`DB_DRIVER=firestore`)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FIREBASE_PROJECT_ID` | *(required)* | Firebase/GCP project ID |
+| `FIRESTORE_TOKEN` | | OAuth2 access token. If empty, use Application Default Credentials (`gcloud auth application-default login`). |
+
+Uses the Firestore REST API directly — no GCP SDK needed. Each collection maps to a Firestore collection (teams, vehicles, maintenance_items, service_history, usage_history). Ideal if you already have a Firebase project from the V1 web app.
+
 ## Running Tests
 
 ```bash
@@ -64,6 +73,9 @@ go test ./internal/handler/ -v
 
 # Run only S3 repository tests
 go test ./internal/repository/s3/ -v
+
+# Run only Firestore repository tests
+go test ./internal/repository/firestore/ -v
 
 # Run a specific test
 go test ./internal/handler/ -v -run TestCreateTeam
@@ -139,7 +151,8 @@ api/
 │       ├── interfaces.go  # Repository interfaces
 │       ├── mock/          # In-memory (tests)
 │       ├── mongo/         # MongoDB (Docker/self-hosted)
-│       └── s3/            # S3 JSON files (Lambda/serverless)
+│       ├── s3/            # S3 JSON files (Lambda/serverless)
+│       └── firestore/     # Firestore REST API (Firebase/GCP)
 ├── Dockerfile
 ├── docker-compose.yml
 └── go.mod
@@ -153,4 +166,5 @@ The API uses a repository pattern — swap backends by changing `DB_DRIVER`:
 |--------|----------|-------|
 | `mongo` | Local dev, Docker, self-hosted | MongoDB 7+ |
 | `s3` | Serverless Lambda deployment | S3 bucket |
+| `firestore` | Firebase/GCP deployment | Firestore database |
 | `mock` | Unit tests only (in code) | None |

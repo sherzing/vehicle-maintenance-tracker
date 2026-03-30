@@ -20,6 +20,7 @@ import (
 	"github.com/sherzing/vehicle-maintenance-tracker/api/internal/config"
 	"github.com/sherzing/vehicle-maintenance-tracker/api/internal/handler"
 	"github.com/sherzing/vehicle-maintenance-tracker/api/internal/middleware"
+	firestoreRepo "github.com/sherzing/vehicle-maintenance-tracker/api/internal/repository/firestore"
 	mongoRepo "github.com/sherzing/vehicle-maintenance-tracker/api/internal/repository/mongo"
 	s3Repo "github.com/sherzing/vehicle-maintenance-tracker/api/internal/repository/s3"
 )
@@ -82,9 +83,20 @@ func main() {
 		slog.Info("s3 storage backend ready")
 		startServer(cfg, logger, handler.New(repos, authMW))
 
+	case "firestore":
+		slog.Info("initializing firestore storage backend", "project", cfg.FirebaseProjectID)
+		if cfg.FirebaseProjectID == "" {
+			slog.Error("FIREBASE_PROJECT_ID is required when DB_DRIVER=firestore")
+			os.Exit(1)
+		}
+		fsClient := firestoreRepo.NewClient(http.DefaultClient, cfg.FirebaseProjectID, cfg.FirestoreToken)
+		repos := firestoreRepo.NewRepositories(fsClient)
+		slog.Info("firestore storage backend ready")
+		startServer(cfg, logger, handler.New(repos, authMW))
+
 	default:
 		slog.Error("unsupported DB_DRIVER", "driver", cfg.DBDriver)
-		slog.Info("supported drivers: mongo, s3")
+		slog.Info("supported drivers: mongo, s3, firestore")
 		os.Exit(1)
 	}
 }
