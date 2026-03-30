@@ -13,10 +13,13 @@ import (
 
 // NewRepositories creates all MongoDB repository implementations and returns them.
 func NewRepositories(ctx context.Context, uri string) (*repository.Repositories, error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
+	client, err := mongo.Connect(ctx, options.Client().
+		ApplyURI(uri).
+		SetConnectTimeout(5*time.Second).
+		SetServerSelectionTimeout(5*time.Second))
 	if err != nil {
 		return nil, fmt.Errorf("connecting to mongodb: %w", err)
 	}
