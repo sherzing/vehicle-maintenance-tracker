@@ -15,9 +15,13 @@ type Config struct {
 	RateLimitRPM      int
 	CORSOrigins       string
 
-	// AWS (DynamoDB)
-	AWSRegion        string
+	// AWS
+	AWSRegion         string
 	DynamoTablePrefix string
+
+	// S3 storage backend
+	S3Bucket string
+	S3Prefix string
 }
 
 func Load() (*Config, error) {
@@ -31,6 +35,8 @@ func Load() (*Config, error) {
 		CORSOrigins:       getEnv("CORS_ORIGINS", "*"),
 		AWSRegion:         getEnv("AWS_REGION", ""),
 		DynamoTablePrefix: getEnv("DYNAMO_TABLE_PREFIX", "vmt_"),
+		S3Bucket:          getEnv("S3_BUCKET", ""),
+		S3Prefix:          getEnv("S3_PREFIX", "vmt/"),
 	}
 
 	if cfg.FirebaseProjectID == "" {

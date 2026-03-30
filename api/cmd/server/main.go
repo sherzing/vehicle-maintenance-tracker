@@ -13,11 +13,15 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+
 	"github.com/sherzing/vehicle-maintenance-tracker/api/internal/auth"
 	"github.com/sherzing/vehicle-maintenance-tracker/api/internal/config"
 	"github.com/sherzing/vehicle-maintenance-tracker/api/internal/handler"
 	"github.com/sherzing/vehicle-maintenance-tracker/api/internal/middleware"
 	mongoRepo "github.com/sherzing/vehicle-maintenance-tracker/api/internal/repository/mongo"
+	s3Repo "github.com/sherzing/vehicle-maintenance-tracker/api/internal/repository/s3"
 )
 
 func main() {
@@ -56,9 +60,25 @@ func main() {
 
 		startServer(cfg, logger, handler.New(repos, verifier))
 
+	case "s3":
+		slog.Info("initializing s3 storage backend", "bucket", cfg.S3Bucket, "prefix", cfg.S3Prefix)
+		if cfg.S3Bucket == "" {
+			slog.Error("S3_BUCKET is required when DB_DRIVER=s3")
+			os.Exit(1)
+		}
+		awsCfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion(cfg.AWSRegion))
+		if err != nil {
+			slog.Error("failed to load AWS config", "error", err)
+			os.Exit(1)
+		}
+		s3Client := s3.NewFromConfig(awsCfg)
+		repos := s3Repo.NewRepositories(s3Client, cfg.S3Bucket, cfg.S3Prefix)
+		slog.Info("s3 storage backend ready")
+		startServer(cfg, logger, handler.New(repos, verifier))
+
 	default:
 		slog.Error("unsupported DB_DRIVER", "driver", cfg.DBDriver)
-		slog.Info("supported drivers: mongo")
+		slog.Info("supported drivers: mongo, s3")
 		slog.Info("coming soon: firestore, dynamo")
 		os.Exit(1)
 	}
