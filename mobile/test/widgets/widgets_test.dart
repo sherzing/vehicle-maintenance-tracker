@@ -72,18 +72,18 @@ void main() {
       );
     }
 
-    testWidgets('renders vehicle year, make, and model', (tester) async {
+    testWidgets('renders vehicle name', (tester) async {
       final vehicle = makeVehicle();
       await tester.pumpWidget(buildCard(vehicle));
 
-      expect(find.text('2023 Toyota Camry'), findsOneWidget);
+      expect(find.text('Test Vehicle'), findsOneWidget);
     });
 
     testWidgets('renders vehicle subtitle', (tester) async {
       final vehicle = makeVehicle();
       await tester.pumpWidget(buildCard(vehicle));
 
-      // subtitle for this vehicle: "Toyota Camry 2023"
+      // subtitle combines make, model, year: "Toyota Camry 2023"
       expect(find.text(vehicle.subtitle), findsOneWidget);
     });
 

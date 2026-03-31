@@ -29,7 +29,7 @@ class VehicleCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${vehicle.year} ${vehicle.make} ${vehicle.model}',
+                      vehicle.name,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 4),
@@ -51,17 +51,15 @@ class VehicleCard extends StatelessWidget {
     );
   }
 
-  IconData _iconForType(String type) {
+  IconData _iconForType(VehicleType type) {
     switch (type) {
-      case 'car':
+      case VehicleType.car:
         return Icons.directions_car;
-      case 'truck':
-        return Icons.local_shipping;
-      case 'motorcycle':
+      case VehicleType.motorcycle:
         return Icons.two_wheeler;
-      case 'boat':
-        return Icons.sailing;
-      default:
+      case VehicleType.bicycle:
+        return Icons.pedal_bike;
+      case VehicleType.other:
         return Icons.commute;
     }
   }
